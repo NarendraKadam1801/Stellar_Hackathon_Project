@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const expenseSchame = new mongoose.Schema(
+const NgoSchame = new mongoose.Schema(
   {
     NgoName: {
       type: String,
@@ -10,6 +10,7 @@ const expenseSchame = new mongoose.Schema(
     RegNumber:{
       type: String,
       require: true,
+      unique:true,
     },
     Description: {
       type: String,
@@ -19,6 +20,10 @@ const expenseSchame = new mongoose.Schema(
       type: String,
       require: true,
       unique:true
+    },
+     PhoneNo:{
+      type: String,
+      require: true,
     },
     Password: {
       type: String,
@@ -36,4 +41,4 @@ const expenseSchame = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const expenseModel = mongoose.model("expensemodel", expenseSchame);
+export const expenseModel = mongoose.model("ngomodel", NgoSchame);

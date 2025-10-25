@@ -21,7 +21,10 @@ const expenseSchame = new mongoose.Schema(
     ImgCid: {
       type: String,
       unique: true,
-      require: true,
+    },
+    NgoRef:{
+      type:mongoose.Schema.Types.ObjectId,
+      ref:"ngomodel"
     },
     NeedAmount: {
       type: Number,
