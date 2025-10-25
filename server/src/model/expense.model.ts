@@ -6,27 +6,9 @@ const expenseSchame = new mongoose.Schema(
       type: String,
       unique: true,
     },
-    previousTxn: {
-      type: String,
-      unique: true,
-    },
     postIDs: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "post",
-    },
-    usedAmount: {
-      type: Number,
-      require: true,
-    },
-    usedFrom: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "donation",
-      },
-    ],
-    ipfsCid: {
-      type: String,
-      require: true,
     },
   },
   { timestamps: true }

@@ -8,15 +8,14 @@ import {
   BASE_FEE,
 } from "@stellar/stellar-sdk";
 
-interface WalletToWallet {
+export interface WalletToWallet {
   senderKey: string;
   receiverKey: string;
   amount: number;
   meta: {
     cid: string;
-    prevTxn: string;
+    prevTxn?: string;
   };
-  contractId: string;
 }
 
 interface PaymentResult {
@@ -30,6 +29,41 @@ interface PaymentResult {
 // on both places
 
 /**
+ * Get balance for a user's wallet
+ */
+const getBalance = async (publicKey: string) => {
+  try {
+    const account = await STELLAR_CONFIG.server.loadAccount(publicKey);
+
+    console.log(`\n=== Balance for ${publicKey} ===`);
+
+    const balances = account.balances.map((balance: any) => {
+      if (balance.asset_type === "native") {
+        console.log(`XLM: ${balance.balance}`);
+        return {
+          asset: "XLM",
+          balance: balance.balance,
+        };
+      } else {
+        console.log(
+          `${balance.asset_code}: ${balance.balance} (Issuer: ${balance.asset_issuer})`
+        );
+        return {
+          asset: balance.asset_code,
+          balance: balance.balance,
+          issuer: balance.asset_issuer,
+        };
+      }
+    });
+
+    return balances;
+  } catch (error: any) {
+    console.error("Error fetching balance:", error.message);
+    throw error;
+  }
+};
+
+/**
  * Send XLM payment from one wallet to another
  */
 const sendPaymentToWallet = async (
@@ -41,7 +75,15 @@ const sendPaymentToWallet = async (
     const senderPublicKey = senderKeypair.publicKey();
 
     // Load sender account
-    const senderAccount = await STELLAR_CONFIG.server.loadAccount(senderPublicKey);
+    const senderAccount = await STELLAR_CONFIG.server.loadAccount(
+      senderPublicKey
+    );
+    const getBalancedata = await getBalance(senderPublicKey);
+    const xlmBalance = getBalancedata.find((b) => b.asset === "XLM");
+
+    // Convert string to number
+    const balanceAsNumber = parseFloat(xlmBalance?.balance); // 123.456
+    if(balanceAsNumber<=0) throw new Error("low balance")
 
     // Build payment transaction
     const transaction = new TransactionBuilder(senderAccount, {
@@ -71,7 +113,7 @@ const sendPaymentToWallet = async (
     };
   } catch (error: any) {
     console.error("✗ Payment failed:", error.message);
-    
+
     if (error.response?.data) {
       console.error("Error details:", error.response.data);
     }
@@ -83,53 +125,18 @@ const sendPaymentToWallet = async (
   }
 };
 
-/**
- * Get balance for a user's wallet
- */
-const getBalance = async (publicKey: string) => {
+const verfiyTransaction = async (TransactionId: string) => {
   try {
-    const account = await STELLAR_CONFIG.server.loadAccount(publicKey);
-
-    console.log(`\n=== Balance for ${publicKey} ===`);
-    
-    const balances = account.balances.map((balance: any) => {
-      if (balance.asset_type === "native") {
-        console.log(`XLM: ${balance.balance}`);
-        return {
-          asset: "XLM",
-          balance: balance.balance,
-        };
-      } else {
-        console.log(
-          `${balance.asset_code}: ${balance.balance} (Issuer: ${balance.asset_issuer})`
-        );
-        return {
-          asset: balance.asset_code,
-          balance: balance.balance,
-          issuer: balance.asset_issuer,
-        };
-      }
-    });
-
-    return balances;
-  } catch (error: any) {
-    console.error("Error fetching balance:", error.message);
-    throw error;
-  }
-};
-
-
-const verfiyTransaction=async(TransactionId:string)=>{
-  try {
-    const transaction=await STELLAR_CONFIG.server.transactions().transaction(TransactionId).call();
-    if(!transaction) throw new Error("No transaction found");
+    const transaction = await STELLAR_CONFIG.server
+      .transactions()
+      .transaction(TransactionId)
+      .call();
+    if (!transaction) throw new Error("No transaction found");
     return transaction;
   } catch (error) {
     return error;
   }
-}
+};
 
-const getTransactionData=async(TransactionId:string)=>{
-  
-}
-export { sendPaymentToWallet, getBalance,verfiyTransaction };
+const getTransactionData = async (TransactionId: string) => {};
+export { sendPaymentToWallet, getBalance, verfiyTransaction };

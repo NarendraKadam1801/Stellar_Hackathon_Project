@@ -67,7 +67,7 @@ export const saveContractWithWallet = async (userData: UserDataWallet) => {
       return txResponse;
     }
 
-    return result;
+    return result.hash;
   } catch (error) {
     return error;
   }

@@ -74,9 +74,17 @@ const findUserWithTokenAndPassCheck=async(userData:userLoginData)=>{
                 PublicKey:data.PublicKey,
             }
         }
-        
+
     } catch (error) {
         return error;
     }
 }
-export { findUser,saveDataAndToken,findUserWithTokenAndPassCheck };
+
+const getPrivateKey=async(Id:string):Promise<string>=>{
+        if(!Id) throw new Error("Please provide postId");
+        const UserData= await ngoModel.findOne({_id:new mongoose.Types.ObjectId(Id)}).select("PrivateKey -_Id").lean<{ PrivateKey: string }>();
+        if(!UserData) throw new Error("no privatekey found!!");
+        return UserData.PrivateKey;
+    
+}
+export { findUser,saveDataAndToken,findUserWithTokenAndPassCheck,getPrivateKey };
