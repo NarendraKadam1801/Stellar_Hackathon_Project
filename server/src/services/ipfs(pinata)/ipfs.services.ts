@@ -1,5 +1,5 @@
-import {PinataSDK} from "pinata"
-
+import {PinataSDK} from "pinata";
+import fs from "fs";
 
 const pinata=new PinataSDK({
     pinataJwt:process.env.PINATA_JWT,
@@ -42,6 +42,26 @@ const uploadOnIpfs=async(data:Object)=>{
     }
 }
 
+
+const uploadOnIpfsBill=async(data:Express.Multer.File)=>{
+    try {
+        const fileBuffer = fs.readFileSync(data.path);
+        const file = new File([fileBuffer], data.originalname, { type: data.mimetype });
+        const uploadData=await pinata.upload.public.file(file);
+
+        if(!uploadData) throw new Error("Somethign went wrong while uploading data from ipfs");
+        return {
+            success:true,
+            cid:uploadData.cid,
+        }
+    } catch (error) {
+        return {
+            success:false,
+            error,
+        }
+    }
+}
+
 const deleteIpfsData=async(cid:string[])=>{
     try {
         const dataDelet=await pinata.files.public.delete(cid);
@@ -61,6 +81,7 @@ const deleteIpfsData=async(cid:string[])=>{
 export{
     retriveFromIpfs,
     uploadOnIpfs,
-    deleteIpfsData
+    deleteIpfsData,
+    uploadOnIpfsBill
 }
 

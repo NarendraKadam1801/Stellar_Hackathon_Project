@@ -16,7 +16,6 @@ const donationSchame = new mongoose.Schema(
     },
     RemainingAmount: {
       type: Number,
-      require: true,
     },
     
   },

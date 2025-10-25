@@ -34,9 +34,10 @@ const singup = AsyncHandler(async (req: Request, res: Response) => {
 const login=AsyncHandler(async (req:Request,res:Response)=>{
     const userData:userLoginData=req.body;
     if(!userData) throw new ApiError(400,"invalid data");
-    const dataCheck=findUserWithTokenAndPassCheck(userData);
+    const dataCheck:any=await findUserWithTokenAndPassCheck(userData);
     if(!dataCheck) throw new ApiError(500,`something went wrong while checking ${dataCheck}`);
-    return res.status(200).json(new ApiResponse(200,dataCheck,"user confirm"));
+    const {accessToken,refreshToken}=dataCheck;
+    return res.status(200).cookie('accessToken',accessToken).cookie('refreshToken',refreshToken).json(new ApiResponse(200,dataCheck,"user confirm"));
 })
 
 

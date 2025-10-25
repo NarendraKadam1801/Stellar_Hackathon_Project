@@ -118,4 +118,18 @@ const getBalance = async (publicKey: string) => {
   }
 };
 
-export { sendPaymentToWallet, getBalance };
+
+const verfiyTransaction=async(TransactionId:string)=>{
+  try {
+    const transaction=await STELLAR_CONFIG.server.transactions().transaction(TransactionId).call();
+    if(!transaction) throw new Error("No transaction found");
+    return transaction;
+  } catch (error) {
+    return error;
+  }
+}
+
+const getTransactionData=async(TransactionId:string)=>{
+  
+}
+export { sendPaymentToWallet, getBalance,verfiyTransaction };

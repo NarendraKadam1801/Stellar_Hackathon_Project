@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const expenseSchame = new mongoose.Schema(
+const postSchame = new mongoose.Schema(
   {
     Title: {
       type: String,
@@ -32,7 +32,6 @@ const expenseSchame = new mongoose.Schema(
     },
     CollectedAmount: {
       type: Number,
-      require: true,
     },
     WalletAddr: {
       type: String,
@@ -42,4 +41,4 @@ const expenseSchame = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const expenseModel = mongoose.model("expensemodel", expenseSchame);
+export const postModel = mongoose.model("postmodel", postSchame);
