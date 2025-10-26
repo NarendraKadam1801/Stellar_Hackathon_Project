@@ -60,7 +60,14 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
       }
     }
 
-    return data
+    // Server returns { statusCode, data, message, success }
+    // Map it to our expected format
+    return {
+      success: data.success || response.ok,
+      data: data.data,
+      message: data.message,
+      error: data.error,
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error"
     return {
@@ -146,7 +153,7 @@ export const postsApi = {
     WalletAddr: string
   }) => {
     return fetchWithAuth("/posts", {
-      method: "GET",
+      method: "POST",
       body: JSON.stringify(postData),
     })
   },

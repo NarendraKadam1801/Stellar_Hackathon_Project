@@ -8,6 +8,7 @@ import { CheckCircle2, Loader2, TrendingUp, AlertCircle } from "lucide-react"
 import { getExchangeRate, convertRsToXlm } from "@/lib/exchange-rates"
 import { useWallet } from "@/lib/wallet-context"
 import { submitDonationTransaction } from "@/lib/stellar-utils"
+import { paymentApi } from "@/lib/api-client"
 
 interface DonateModalProps {
   isOpen: boolean
@@ -52,7 +53,18 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
     setError("")
 
     try {
-      const result = await submitDonationTransaction(publicKey, stellarAmount.toFixed(7), task.id, signTransaction)
+      const result = await submitDonationTransaction(publicKey, stellarAmount.toFixed(7), task._id, signTransaction)
+
+      // Verify donation with backend
+      const verifyResponse = await paymentApi.verifyDonation({
+        TransactionId: result.hash,
+        postID: task._id,
+        Amount: Number.parseFloat(amount),
+      })
+
+      if (!verifyResponse.success) {
+        throw new Error(verifyResponse.message || "Failed to verify donation")
+      }
 
       setTxHash(result.hash)
       setStep("success")

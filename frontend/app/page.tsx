@@ -19,15 +19,28 @@ export default function Home() {
         setLoading(true)
         const response = await postsApi.getAll()
         const posts = response.data || []
-        setFeaturedTasks(posts.slice(0, 3))
+        
+        // Map backend data to frontend format
+        const mappedPosts = posts.map((post: any) => ({
+          id: post._id,
+          title: post.Title,
+          ngo: "NGO", // Placeholder
+          description: post.Description,
+          goal: parseFloat(post.NeedAmount) || 0,
+          raised: 0, // Set to 0 as it's missing in current API data
+          image: post.ImgCid ? `https://gateway.pinata.cloud/ipfs/${post.ImgCid}` : "/placeholder.svg",
+          category: post.Type,
+        }))
+        
+        setFeaturedTasks(mappedPosts.slice(0, 3))
 
         // Calculate stats from posts
-        const totalRaised = posts.reduce((sum, post) => sum + (post.raised || 0), 0)
-        const activeDonors = posts.reduce((sum, post) => sum + (post.donors || 0), 0)
+        const totalRaised = mappedPosts.reduce((sum, post) => sum + (post.raised || 0), 0)
+        const activeDonors = mappedPosts.length * 2 // Estimate based on posts
         setStats({
           totalRaised,
           activeDonors,
-          verifiedNGOs: Math.ceil(posts.length / 2),
+          verifiedNGOs: Math.ceil(mappedPosts.length / 2),
         })
       } catch (error) {
         console.error("[v0] Error fetching featured tasks:", error)

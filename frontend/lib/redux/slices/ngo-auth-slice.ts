@@ -1,13 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
+import { authApi } from "@/lib/api-client"
 
 interface NGOProfile {
-  id: string
-  name: string
-  email: string
-  registrationNumber: string
-  description: string
-  logo?: string
-  createdAt: Date
+  Id: string
+  NgoName: string
+  Email: string
+  RegNumber: string
+  Description: string
+  createdAt: string
 }
 
 interface NGOAuthState {
@@ -15,6 +15,8 @@ interface NGOAuthState {
   ngoProfile: NGOProfile | null
   isLoading: boolean
   error: string | null
+  accessToken: string | null
+  refreshToken: string | null
 }
 
 const initialState: NGOAuthState = {
@@ -22,26 +24,16 @@ const initialState: NGOAuthState = {
   ngoProfile: null,
   isLoading: false,
   error: null,
+  accessToken: null,
+  refreshToken: null,
 }
 
 export const loginNGO = createAsyncThunk(
   "ngoAuth/login",
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      // Simulate API call to backend
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Mock NGO data - in real app, this would come from backend
-      const mockNGO: NGOProfile = {
-        id: "ngo-" + Math.random().toString(36).substr(2, 9),
-        name: "Education for All Foundation",
-        email,
-        registrationNumber: "NGO-2024-001",
-        description: "Providing quality education to underprivileged children",
-        createdAt: new Date(),
-      }
-
-      return mockNGO
+      const response = await authApi.login(email, password)
+      return response
     } catch (error) {
       const message = error instanceof Error ? error.message : "Login failed"
       return rejectWithValue(message)
@@ -51,18 +43,17 @@ export const loginNGO = createAsyncThunk(
 
 export const signupNGO = createAsyncThunk(
   "ngoAuth/signup",
-  async (ngoData: Omit<NGOProfile, "id" | "createdAt">, { rejectWithValue }) => {
+  async (ngoData: {
+    ngoName: string
+    regNumber: string
+    description: string
+    email: string
+    phoneNo: string
+    password: string
+  }, { rejectWithValue }) => {
     try {
-      // Simulate API call to backend
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      const newNGO: NGOProfile = {
-        ...ngoData,
-        id: "ngo-" + Math.random().toString(36).substr(2, 9),
-        createdAt: new Date(),
-      }
-
-      return newNGO
+      const response = await authApi.signup(ngoData)
+      return response
     } catch (error) {
       const message = error instanceof Error ? error.message : "Signup failed"
       return rejectWithValue(message)
@@ -78,6 +69,8 @@ const ngoAuthSlice = createSlice({
       state.isAuthenticated = false
       state.ngoProfile = null
       state.error = null
+      state.accessToken = null
+      state.refreshToken = null
     },
     clearNGOError: (state) => {
       state.error = null
@@ -92,7 +85,9 @@ const ngoAuthSlice = createSlice({
       .addCase(loginNGO.fulfilled, (state, action) => {
         state.isLoading = false
         state.isAuthenticated = true
-        state.ngoProfile = action.payload
+        state.ngoProfile = action.payload.userData
+        state.accessToken = action.payload.accessToken
+        state.refreshToken = action.payload.refreshToken
       })
       .addCase(loginNGO.rejected, (state, action) => {
         state.isLoading = false
@@ -105,7 +100,9 @@ const ngoAuthSlice = createSlice({
       .addCase(signupNGO.fulfilled, (state, action) => {
         state.isLoading = false
         state.isAuthenticated = true
-        state.ngoProfile = action.payload
+        state.ngoProfile = action.payload.userData
+        state.accessToken = action.payload.accessToken
+        state.refreshToken = action.payload.refreshToken
       })
       .addCase(signupNGO.rejected, (state, action) => {
         state.isLoading = false

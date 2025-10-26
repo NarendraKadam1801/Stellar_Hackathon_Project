@@ -19,9 +19,11 @@ interface BackendTask {
   Title: string;
   Type: string; // Used for category filtering
   Description: string;
-  NeedAmount: number; // The target goal amount
+  NeedAmount: string; // The target goal amount (server returns as string)
   WalletAddr: string;
   NgoRef: string;
+  ImgCid?: string; // Image CID for display
+  Location?: string; // Location field
 }
 
 // Frontend structure (cleaned up for rendering)
@@ -29,9 +31,11 @@ interface Task {
   id: string; // Mapped from _id (for React key)
   title: string; // Mapped from Title
   category: string; // Mapped from Type
-  goal: number; // Mapped from NeedAmount
+  goal: number; // Mapped from NeedAmount (converted to number)
   raised: number; // Safely set to 0 as it's missing in your current API data
-  // Add other properties you use in TaskCard here (e.g., ngo, imgCid)
+  ngo: string; // NGO name (will be fetched separately or set to placeholder)
+  description: string; // Mapped from Description
+  image: string; // Mapped from ImgCid or placeholder
 }
 
 const categories = ["All", "education", "health", "food", "shelter"]; 
@@ -140,10 +144,11 @@ export default async function ExplorePage() {
              id: item._id, 
              title: item.Title,
              category: item.Type.toLowerCase(), // Normalize category to lowercase
-             goal: item.NeedAmount,
-             
-             // 💡 FIX for Runtime Error: Setting 'raised' to 0 explicitly
-             raised: 0, 
+             goal: parseFloat(item.NeedAmount) || 0, // Convert string to number
+             raised: 0, // Set to 0 as it's missing in current API data
+             ngo: "NGO", // Placeholder - will be fetched separately
+             description: item.Description,
+             image: item.ImgCid ? `https://gateway.pinata.cloud/ipfs/${item.ImgCid}` : "/placeholder.svg",
         }));
     }
     
