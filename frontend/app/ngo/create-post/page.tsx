@@ -25,6 +25,7 @@ export default function CreatePostPage() {
     image: null as File | null,
     impact: "",
     timeline: "",
+    walletAddr: ngoProfile?.WalletAddr || "", // Add this line
   })
 
   // Redirect if not authenticated
@@ -52,9 +53,27 @@ export default function CreatePostPage() {
 
   const handlePublish = async () => {
     setIsProcessing(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setIsProcessing(false)
-    setStep("success")
+    try {
+      // Your API call to create post should include the wallet address
+      const postData = {
+        Title: formData.title,
+        Description: formData.description,
+        NeedAmount: formData.goal,
+        Type: formData.category,
+        WalletAddr: formData.walletAddr, // Make sure this is included
+        ImgCid: "", // Add your IPFS image CID here if using one
+        Location: "", // Add location if needed
+      }
+      
+      // Your API call here
+      // await postsApi.create(postData)
+      
+      setStep("success")
+    } catch (error) {
+      console.error("Failed to create post:", error)
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   const handleReset = () => {
@@ -67,6 +86,7 @@ export default function CreatePostPage() {
       image: null,
       impact: "",
       timeline: "",
+      walletAddr: ngoProfile?.WalletAddr || "", // Add this line
     })
   }
 
@@ -235,6 +255,14 @@ export default function CreatePostPage() {
                   <p className="text-sm text-muted-foreground mb-2">Expected Impact</p>
                   <p className="text-foreground whitespace-pre-wrap">{formData.impact}</p>
                 </div>
+
+                {/* Add this new section */}
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Donation Wallet</p>
+                  <p className="font-mono text-sm bg-slate-50 p-3 rounded break-all">
+                    {formData.walletAddr}
+                  </p>
+                </div>
               </div>
 
               <div className="flex gap-4">
@@ -276,6 +304,8 @@ export default function CreatePostPage() {
                   <p className="font-semibold text-foreground">{formData.title}</p>
                   <p className="text-sm text-muted-foreground">Goal: ₹{Number(formData.goal).toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground">NGO: {ngoProfile?.NgoName}</p>
+                  {/* Add this line */}
+                  <p className="text-sm font-mono break-all">Wallet: {formData.walletAddr}</p>
                 </div>
               </div>
 

@@ -1,13 +1,12 @@
 "use client"
 
-import { useState } from "react";
-import { Header } from "@/components/header";
-import { TaskCard } from "@/components/task-card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import { postsApi } from "@/lib/api-client";
-// NOTE: You will need to ensure your TaskCard and other component imports are correct.
+import { useState } from "react"
+import { Header } from "@/components/header"
+import { TaskCard } from "@/components/task-card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Search } from "lucide-react"
+import { postsApi } from "@/lib/api-client"
 
 // ----------------------------------------------------------------------
 // 1. TYPES & CONSTANTS (SHARED)
@@ -15,56 +14,51 @@ import { postsApi } from "@/lib/api-client";
 
 // Backend structure based on your API response
 interface BackendTask {
-  _id: string;
-  Title: string;
-  Type: string; // Used for category filtering
-  Description: string;
-  NeedAmount: string; // The target goal amount (server returns as string)
-  WalletAddr: string;
-  NgoRef: string;
-  ImgCid?: string; // Image CID for display
-  Location?: string; // Location field
+  _id: string
+  Title: string
+  Type: string
+  Description: string
+  NeedAmount: string
+  WalletAddr: string
+  NgoRef: string
+  ImgCid?: string
+  Location?: string
 }
 
 // Frontend structure (cleaned up for rendering)
 interface Task {
-  id: string; // Mapped from _id (for React key)
-  title: string; // Mapped from Title
-  category: string; // Mapped from Type
-  goal: number; // Mapped from NeedAmount (converted to number)
-  raised: number; // Safely set to 0 as it's missing in your current API data
-  ngo: string; // NGO name (will be fetched separately or set to placeholder)
-  description: string; // Mapped from Description
-  image: string; // Mapped from ImgCid or placeholder
+  _id: string // Keep the original backend _id
+  title: string
+  category: string
+  goal: number
+  raised: number
+  ngo: string
+  description: string
+  image: string
 }
 
-const categories = ["All", "education", "health", "food", "shelter"]; 
+const categories = ["All", "education", "health", "food", "shelter"]
 
 // ----------------------------------------------------------------------
-// 2. CLIENT COMPONENT (Interactivity & Rendering)
+// 2. CLIENT COMPONENT
 // ----------------------------------------------------------------------
 
 interface ClientExplorePageProps {
-  initialTasks: Task[];
+  initialTasks: Task[]
 }
 
-// Define the rendering component as a client component
 const ClientExplorePage: React.FC<ClientExplorePageProps> = ({ initialTasks }) => {
-  "use client"; // Marks this block as client-side code
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("All")
 
   const filteredTasks = initialTasks.filter((task) => {
-    // 💡 Filter on cleaned property names (title, category)
     const matchesSearch =
       task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.category.toLowerCase().includes(searchQuery.toLowerCase());
-      
-    const matchesCategory = selectedCategory === "All" || task.category.toLowerCase() === selectedCategory.toLowerCase();
-    
-    return matchesSearch && matchesCategory;
-  });
+      task.category.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesCategory =
+      selectedCategory === "All" || task.category.toLowerCase() === selectedCategory.toLowerCase()
+    return matchesSearch && matchesCategory
+  })
 
   return (
     <div className="min-h-screen bg-background">
@@ -89,7 +83,7 @@ const ClientExplorePage: React.FC<ClientExplorePageProps> = ({ initialTasks }) =
             <div className="flex gap-2 flex-wrap">
               {categories.map((category) => (
                 <Button
-                  key={category} // Key prop fixed here
+                  key={category}
                   variant={selectedCategory === category ? "default" : "outline"}
                   onClick={() => setSelectedCategory(category)}
                   size="sm"
@@ -103,8 +97,7 @@ const ClientExplorePage: React.FC<ClientExplorePageProps> = ({ initialTasks }) =
           {/* Tasks Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTasks.map((task) => (
-              // 💡 Key prop uses the unique 'id' mapped from '_id'
-              <TaskCard key={task.id} task={task} /> 
+              <TaskCard key={task._id} task={task} /> // pass _id directly
             ))}
           </div>
 
@@ -116,48 +109,32 @@ const ClientExplorePage: React.FC<ClientExplorePageProps> = ({ initialTasks }) =
         </div>
       </div>
     </div>
-  );
-};
-
+  )
+}
 
 // ----------------------------------------------------------------------
 // 3. SERVER COMPONENT (Data Fetching & Wrapper)
 // ----------------------------------------------------------------------
 
 interface ApiResponse {
-  statusCode: number;
-  data: BackendTask[];
-  message: string;
-  success: boolean;
+  statusCode: number
+  data: BackendTask[]
+  message: string
+  success: boolean
 }
 
-// Default export is the Server Component that fetches data and renders the client component
 export default async function ExplorePage() {
-  let initialTasks: Task[] = [];
-  
+  let initialTasks: BackendTask[] = [] // Use BackendTask directly instead of transforming
+
   try {
-    const apiResponse: ApiResponse = await postsApi.getAll();
-    console.log(apiResponse);
+    const apiResponse: ApiResponse = await postsApi.getAll()
     if (apiResponse.success && apiResponse.data && Array.isArray(apiResponse.data)) {
-        initialTasks = apiResponse.data.map(item => ({
-             // Mapping Logic: Cleaning and normalizing properties
-             id: item._id, 
-             title: item.Title,
-             category: item.Type.toLowerCase(), // Normalize category to lowercase
-             goal: parseFloat(item.NeedAmount) || 0, // Convert string to number
-             raised: 0, // Set to 0 as it's missing in current API data
-             ngo: "NGO", // Placeholder - will be fetched separately
-             description: item.Description,
-             image: item.ImgCid ? `https://gateway.pinata.cloud/ipfs/${item.ImgCid}` : "/placeholder.svg",
-        }));
+      initialTasks = apiResponse.data // Use the raw data directly
     }
-    
   } catch (error) {
-    console.error("Failed to fetch tasks:", error);
-    // Return empty array on error
-    initialTasks = []; 
+    console.error("Failed to fetch tasks:", error)
+    initialTasks = []
   }
 
-  // Pass the clean, safe data to the client component
-  return <ClientExplorePage initialTasks={initialTasks} />;
+  return <ClientExplorePage initialTasks={initialTasks} />
 }

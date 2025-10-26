@@ -139,8 +139,27 @@ export const postsApi = {
     return await fetchWithAuth("/posts/");
   },
 
-  getById: async (postId: string) => {
-    return fetchWithAuth(`/posts/${postId}`)
+  getById: async (id: string) => {
+    if (!id || typeof id !== 'string') {
+      throw new Error('Task ID is required and must be a string')
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL
+    if (!baseUrl) {
+      throw new Error('API URL is not configured')
+    }
+
+    try {
+      const response = await fetch(`${baseUrl}/api/posts/${id}`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      return data
+    } catch (error) {
+      console.error('Failed to fetch task:', error)
+      throw error
+    }
   },
 
   create: async (postData: {

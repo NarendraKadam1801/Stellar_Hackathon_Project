@@ -11,6 +11,7 @@ interface NGOProfile {
   RegNumber: string
   Description: string
   createdAt: string
+  WalletAddr: string // Make sure this is included
 }
 
 interface NGOAuthContextType {
