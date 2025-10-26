@@ -5,14 +5,16 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { DonateModal } from "@/components/donate-modal"
 import { SimpleDonateModal } from "@/components/simple-donate-modal"
+import { WalletTransferModal } from "@/components/wallet-transfer-modal"
 import { DonationsList } from "@/components/donations-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-import { Heart, Share2, MapPin, Loader2 } from "lucide-react"
+import { Heart, Share2, MapPin, Loader2, Wallet } from "lucide-react"
 import { postsApi } from "@/lib/api-client"
 
 export default function TaskDetailPage({ params }: { params: { id: string } }) {
   const [isDonateOpen, setIsDonateOpen] = useState(false)
+  const [isWalletTransferOpen, setIsWalletTransferOpen] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
   const [task, setTask] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -162,6 +164,16 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
                   Donate Securely
                 </Button>
 
+                <Button
+                  onClick={() => setIsWalletTransferOpen(true)}
+                  variant="outline"
+                  className="w-full bg-transparent mb-3"
+                  size="lg"
+                >
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Wallet Transfer
+                </Button>
+
                 <Button variant="outline" className="w-full bg-transparent" size="lg">
                   Share Task
                 </Button>
@@ -190,6 +202,11 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
       </div>
 
       <SimpleDonateModal isOpen={isDonateOpen} onClose={() => setIsDonateOpen(false)} task={task} />
+      <WalletTransferModal 
+        isOpen={isWalletTransferOpen} 
+        onClose={() => setIsWalletTransferOpen(false)} 
+        task={task} 
+      />
     </div>
   )
 }

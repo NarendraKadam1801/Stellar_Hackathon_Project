@@ -1,120 +1,45 @@
-// This simulates Stellar SDK functionality without requiring the actual package
+import { 
+  Server, 
+  Keypair, 
+  TransactionBuilder, 
+  Operation, 
+  Asset, 
+  Memo, 
+  Networks,
+  BASE_FEE 
+} from 'stellar-sdk'
 
-// Mock Stellar SDK classes and functions
-const Networks = {
-  TESTNET_NETWORK_PASSPHRASE: "Test SDF Network ; September 2015",
-}
-
-const BASE_FEE = "100"
-
-class Server {
-  constructor(private url: string) {}
-
-  async loadAccount(publicKey: string) {
-    // Mock account data
-    return {
-      id: publicKey,
-      account_id: publicKey,
-      balances: [
-        {
-          balance: "1000.0000000",
-          asset_type: "native",
-        },
-      ],
-      sequence: "1",
-    }
-  }
-
-  async submitTransaction(signedTx: any) {
-    // Mock transaction submission
-    return {
-      hash: `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      ledger: Math.floor(Math.random() * 1000000),
-      successful: true,
-    }
-  }
-}
-
-class TransactionBuilder {
-  private operations: any[] = []
-  private memo: any = null
-  private timeout = 30
-
-  constructor(
-    private account: any,
-    private options: any,
-  ) {}
-
-  addMemo(memo: any) {
-    this.memo = memo
-    return this
-  }
-
-  addOperation(operation: any) {
-    this.operations.push(operation)
-    return this
-  }
-
-  setTimeout(timeout: number) {
-    this.timeout = timeout
-    return this
-  }
-
-  build() {
-    return {
-      toEnvelope: () => ({
-        toXDR: () => `mock_xdr_${Date.now()}`,
-      }),
-    }
-  }
-}
-
-const Operation = {
-  payment: (options: any) => ({
-    type: "payment",
-    ...options,
-  }),
-}
-
-const Asset = {
-  native: () => ({
-    code: "XLM",
-    issuer: null,
-  }),
-}
-
-const Memo = {
-  text: (text: string) => ({
-    type: "text",
-    value: text,
-  }),
-}
-
-// NGO wallet address (hardcoded for demo - in production this would be dynamic)
-const NGO_WALLET_ADDRESS = "GBUQWP3BOUZX34ULNQG23RQ6F4BVXEYMJUCHUZI7VCZE7FDCVXWH6HUP"
-
-const server = new Server("https://horizon-testnet.stellar.org")
+// Initialize Stellar server for testnet
+const server = new Server('https://horizon-testnet.stellar.org')
 const networkPassphrase = Networks.TESTNET_NETWORK_PASSPHRASE
 
 export async function submitDonationTransaction(
-  publicKey: string,
+  senderPublicKey: string,
+  receiverAddress: string,
   amount: string,
   taskId: string,
   signTransaction: (tx: string) => Promise<string>,
 ) {
   try {
-    // Get account details
-    const account = await server.loadAccount(publicKey)
+    console.log('Creating donation transaction:', {
+      senderPublicKey,
+      receiverAddress,
+      amount,
+      taskId
+    })
+
+    // Get sender account details
+    const senderAccount = await server.loadAccount(senderPublicKey)
 
     // Create transaction
-    const transaction = new TransactionBuilder(account, {
+    const transaction = new TransactionBuilder(senderAccount, {
       fee: BASE_FEE,
       networkPassphrase: networkPassphrase,
     })
       .addMemo(Memo.text(`Donation-${taskId}`))
       .addOperation(
         Operation.payment({
-          destination: NGO_WALLET_ADDRESS,
+          destination: receiverAddress,
           asset: Asset.native(),
           amount: amount,
         }),
@@ -128,13 +53,15 @@ export async function submitDonationTransaction(
     // Submit to network
     const result = await server.submitTransaction(signedTx)
 
+    console.log('Transaction submitted successfully:', result)
+
     return {
       success: true,
       hash: result.hash,
       ledger: result.ledger,
     }
   } catch (error) {
-    console.error("[v0] Transaction error:", error)
+    console.error('Transaction error:', error)
     throw error
   }
 }
@@ -142,10 +69,33 @@ export async function submitDonationTransaction(
 export async function getAccountBalance(publicKey: string) {
   try {
     const account = await server.loadAccount(publicKey)
-    const nativeBalance = account.balances.find((b: any) => b.asset_type === "native")
+    const nativeBalance = account.balances.find((b: any) => b.asset_type === 'native')
     return nativeBalance ? Number.parseFloat(nativeBalance.balance) : 0
   } catch (error) {
-    console.error("[v0] Balance fetch error:", error)
+    console.error('Balance fetch error:', error)
     return 0
+  }
+}
+
+export async function createStellarAccount() {
+  try {
+    const keypair = Keypair.random()
+    const publicKey = keypair.publicKey()
+    const secretKey = keypair.secret()
+
+    // Fund the account with testnet friendbot
+    try {
+      await fetch(`https://friendbot.stellar.org?addr=${publicKey}`)
+    } catch (error) {
+      console.warn('Friendbot funding failed:', error)
+    }
+
+    return {
+      publicKey,
+      secretKey,
+    }
+  } catch (error) {
+    console.error('Account creation error:', error)
+    throw error
   }
 }

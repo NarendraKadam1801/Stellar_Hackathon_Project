@@ -4,20 +4,19 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { CheckCircle2, Loader2, AlertCircle } from "lucide-react"
+import { CheckCircle2, Loader2, AlertCircle, Wallet, ArrowRight } from "lucide-react"
 import { paymentApi } from "@/lib/api-client"
-import { submitDonationTransaction } from "@/lib/stellar-utils"
 import { useWallet } from "@/lib/wallet-context"
 import { getExchangeRate, convertRsToXlm } from "@/lib/exchange-rates"
 
-interface SimpleDonateModalProps {
+interface WalletTransferModalProps {
   isOpen: boolean
   onClose: () => void
   task: any
 }
 
-export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalProps) {
-  const { isConnected, publicKey, signTransaction } = useWallet()
+export function WalletTransferModal({ isOpen, onClose, task }: WalletTransferModalProps) {
+  const { isConnected, publicKey } = useWallet()
   const [step, setStep] = useState<"amount" | "confirm" | "success" | "error">("amount")
   const [amount, setAmount] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
@@ -25,8 +24,9 @@ export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalPr
   const [error, setError] = useState("")
   const [exchangeRate, setExchangeRate] = useState(15)
   const [isLoadingRate, setIsLoadingRate] = useState(false)
+  const [ipfsCid, setIpfsCid] = useState("")
 
-  const presetAmounts = [50, 100, 200, 500]
+  const presetAmounts = [100, 500, 1000, 2000]
   const stellarAmount = amount ? convertRsToXlm(Number.parseFloat(amount), exchangeRate) : 0
 
   useEffect(() => {
@@ -45,7 +45,6 @@ export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalPr
 
   // Get task ID from different possible field names
   const getTaskId = () => {
-    console.log("Task object:", task) // Debug log
     return task?._id || task?.id || task?.Id || ""
   }
 
@@ -54,9 +53,14 @@ export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalPr
     return task?.Title || task?.title || "Task"
   }
 
+  // Get receiver wallet address
+  const getReceiverAddress = () => {
+    return task?.WalletAddr || task?.walletAddr || ""
+  }
+
   const handleConfirm = async () => {
     const taskId = getTaskId()
-    const receiverAddress = task?.WalletAddr || task?.walletAddr || ""
+    const receiverAddress = getReceiverAddress()
     
     if (!taskId) {
       setError("Task ID not found")
@@ -80,45 +84,40 @@ export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalPr
     setError("")
 
     try {
-      console.log("Starting donation transaction:", {
+      console.log("Starting wallet-to-wallet transfer:", {
         taskId,
         receiverAddress,
         amount,
         stellarAmount: stellarAmount.toFixed(7),
-        senderPublicKey: publicKey
+        senderPublicKey: publicKey,
+        ipfsCid
       })
 
-      // Create real Stellar transaction
-      const result = await submitDonationTransaction(
-        publicKey,
-        receiverAddress,
-        stellarAmount.toFixed(7),
-        taskId,
-        signTransaction
-      )
+      // Generate a mock IPFS CID for the transaction metadata
+      const mockCid = `Qm${Date.now()}${Math.random().toString(36).substr(2, 9)}`
+      setIpfsCid(mockCid)
 
-      if (!result.success) {
-        throw new Error("Transaction failed")
-      }
-
-      // Verify donation with backend using payment API
-      const verifyResponse = await paymentApi.verifyDonation({
-        TransactionId: result.hash,
-        postID: taskId,
+      // Call wallet-to-wallet payment API
+      const walletPayResponse = await paymentApi.walletPay({
+        PublicKey: receiverAddress,
+        PostId: taskId,
         Amount: Number.parseFloat(amount),
+        Cid: mockCid,
       })
 
-      if (!verifyResponse.success) {
-        throw new Error(verifyResponse.message || "Failed to verify donation")
+      if (!walletPayResponse.success) {
+        throw new Error(walletPayResponse.message || "Wallet transfer failed")
       }
 
-      setTxHash(result.hash)
+      // Generate a mock transaction hash for display
+      const mockTxHash = `wallet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      setTxHash(mockTxHash)
       setStep("success")
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Transaction failed"
+      const message = err instanceof Error ? err.message : "Wallet transfer failed"
       setError(message)
       setStep("error")
-      console.error("Donation error:", message)
+      console.error("Wallet transfer error:", message)
     } finally {
       setIsProcessing(false)
     }
@@ -129,6 +128,7 @@ export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalPr
     setAmount("")
     setTxHash("")
     setError("")
+    setIpfsCid("")
     onClose()
   }
 
@@ -136,11 +136,12 @@ export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalPr
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {step === "amount" && "Enter Donation Amount"}
-            {step === "confirm" && "Confirm Donation"}
-            {step === "success" && "Donation Successful"}
-            {step === "error" && "Donation Failed"}
+          <DialogTitle className="flex items-center gap-2">
+            <Wallet className="h-5 w-5" />
+            {step === "amount" && "Wallet to Wallet Transfer"}
+            {step === "confirm" && "Confirm Transfer"}
+            {step === "success" && "Transfer Successful"}
+            {step === "error" && "Transfer Failed"}
           </DialogTitle>
         </DialogHeader>
 
@@ -149,9 +150,19 @@ export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalPr
             {!isConnected && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-2">
                 <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-yellow-800">Please connect your wallet to donate</p>
+                <p className="text-sm text-yellow-800">Please connect your wallet to transfer funds</p>
               </div>
             )}
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="h-4 w-4 text-blue-600" />
+                <p className="text-sm font-medium text-blue-800">NGO Wallet Transfer</p>
+              </div>
+              <p className="text-xs text-blue-700">
+                Transfer funds directly from your wallet to the task's wallet address
+              </p>
+            </div>
 
             <div>
               <label className="text-sm font-medium text-foreground">Amount (₹)</label>
@@ -227,18 +238,30 @@ export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalPr
             <div className="bg-slate-50 rounded-lg p-4">
               <p className="text-sm text-muted-foreground">Receiver Address</p>
               <p className="font-mono text-xs text-foreground break-all">
-                {task?.WalletAddr || task?.walletAddr || "Not found"}
+                {getReceiverAddress()}
               </p>
+            </div>
+
+            <div className="bg-slate-50 rounded-lg p-4">
+              <p className="text-sm text-muted-foreground">Your Wallet</p>
+              <p className="font-mono text-xs text-foreground break-all">
+                {publicKey}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <ArrowRight className="h-4 w-4 text-green-600" />
+              <p className="text-sm text-green-800">Direct wallet-to-wallet transfer</p>
             </div>
 
             <Button onClick={handleConfirm} disabled={isProcessing} className="w-full bg-primary hover:bg-primary/90">
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing Transaction...
+                  Processing Transfer...
                 </>
               ) : (
-                "Sign with Wallet"
+                "Confirm Transfer"
               )}
             </Button>
           </div>
@@ -251,21 +274,26 @@ export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalPr
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">Donation Amount</p>
+              <p className="text-sm text-muted-foreground">Transfer Amount</p>
               <p className="text-3xl font-bold text-foreground">₹{amount}</p>
             </div>
 
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+              <p className="text-sm text-muted-foreground">Stellar Amount</p>
+              <p className="text-2xl font-bold text-blue-600">{stellarAmount.toFixed(4)} XLM</p>
+            </div>
+
             <div className="bg-slate-50 rounded-lg p-4 text-left">
-              <p className="text-xs text-muted-foreground mb-1">Transaction Hash</p>
+              <p className="text-xs text-muted-foreground mb-1">Transaction ID</p>
               <p className="font-mono text-xs text-foreground break-all">{txHash}</p>
-              <a
-                href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-primary hover:underline mt-2 inline-block"
-              >
-                View on Stellar Expert
-              </a>
+              <p className="text-xs text-muted-foreground mt-2">
+                Wallet-to-wallet transfer completed successfully!
+              </p>
+            </div>
+
+            <div className="bg-slate-50 rounded-lg p-4 text-left">
+              <p className="text-xs text-muted-foreground mb-1">IPFS CID</p>
+              <p className="font-mono text-xs text-foreground break-all">{ipfsCid}</p>
             </div>
 
             <div className="space-y-2">
@@ -281,7 +309,7 @@ export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalPr
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
               <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-red-900">Donation Failed</p>
+                <p className="font-semibold text-red-900">Transfer Failed</p>
                 <p className="text-sm text-red-700 mt-1">{error}</p>
               </div>
             </div>

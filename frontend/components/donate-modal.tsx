@@ -56,9 +56,16 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
 
   const handleConfirm = async () => {
     const taskId = getTaskId()
+    const receiverAddress = task?.WalletAddr || task?.walletAddr || ""
     
     if (!taskId) {
       setError("Task ID not found")
+      setStep("error")
+      return
+    }
+
+    if (!receiverAddress) {
+      setError("Receiver wallet address not found")
       setStep("error")
       return
     }
@@ -73,13 +80,30 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
     setError("")
 
     try {
-      // For now, let's create a mock transaction ID for testing
-      // In a real implementation, you would integrate with Stellar here
-      const mockTransactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      
+      console.log("Starting donation transaction:", {
+        taskId,
+        receiverAddress,
+        amount,
+        stellarAmount: stellarAmount.toFixed(7),
+        senderPublicKey: publicKey
+      })
+
+      // Create real Stellar transaction
+      const result = await submitDonationTransaction(
+        publicKey,
+        receiverAddress,
+        stellarAmount.toFixed(7),
+        taskId,
+        signTransaction
+      )
+
+      if (!result.success) {
+        throw new Error("Transaction failed")
+      }
+
       // Verify donation with backend using payment API
       const verifyResponse = await paymentApi.verifyDonation({
-        TransactionId: mockTransactionId,
+        TransactionId: result.hash,
         postID: taskId,
         Amount: Number.parseFloat(amount),
       })
@@ -88,13 +112,13 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
         throw new Error(verifyResponse.message || "Failed to verify donation")
       }
 
-      setTxHash(mockTransactionId)
+      setTxHash(result.hash)
       setStep("success")
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Donation failed"
+      const message = err instanceof Error ? err.message : "Transaction failed"
       setError(message)
       setStep("error")
-      console.error("[v0] Donation error:", message)
+      console.error("Donation error:", message)
     } finally {
       setIsProcessing(false)
     }
@@ -231,11 +255,16 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
             </div>
 
             <div className="bg-slate-50 rounded-lg p-4 text-left">
-              <p className="text-xs text-muted-foreground mb-1">Transaction ID</p>
+              <p className="text-xs text-muted-foreground mb-1">Transaction Hash</p>
               <p className="font-mono text-xs text-foreground break-all">{txHash}</p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Donation recorded successfully! This is a test transaction.
-              </p>
+              <a
+                href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline mt-2 inline-block"
+              >
+                View on Stellar Expert
+              </a>
             </div>
 
             <div className="space-y-2">

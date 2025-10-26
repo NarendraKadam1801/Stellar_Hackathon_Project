@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { CreateTaskModal } from "@/components/create-task-modal"
 import { UploadProofModal } from "@/components/upload-proof-modal"
+import { WalletTransferModal } from "@/components/wallet-transfer-modal"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
-import { Plus, Upload, CheckCircle2, Clock } from "lucide-react"
+import { Plus, Upload, CheckCircle2, Clock, Wallet } from "lucide-react"
 import { mockNGOs } from "@/lib/mock-data"
 
 export default function NGODashboardPage() {
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
   const [isUploadProofOpen, setIsUploadProofOpen] = useState(false)
+  const [isWalletTransferOpen, setIsWalletTransferOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<any>(null)
 
   const ngoData = mockNGOs[0]
@@ -60,13 +62,23 @@ export default function NGODashboardPage() {
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-foreground">NGO Dashboard</h1>
-            <Button
-              onClick={() => setIsCreateTaskOpen(true)}
-              className="bg-primary hover:bg-primary/90 w-full md:w-auto"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create New Task
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+              <Button
+                onClick={() => setIsCreateTaskOpen(true)}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create New Task
+              </Button>
+              <Button
+                onClick={() => setIsWalletTransferOpen(true)}
+                variant="outline"
+                className="bg-transparent"
+              >
+                <Wallet className="h-4 w-4 mr-2" />
+                Wallet Transfer
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -139,6 +151,18 @@ export default function NGODashboardPage() {
                       <Upload className="h-4 w-4 mr-2" />
                       Upload Proof
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedTask(task)
+                        setIsWalletTransferOpen(true)
+                      }}
+                      className="flex-1 md:flex-none"
+                    >
+                      <Wallet className="h-4 w-4 mr-2" />
+                      Transfer
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -149,6 +173,11 @@ export default function NGODashboardPage() {
 
       <CreateTaskModal isOpen={isCreateTaskOpen} onClose={() => setIsCreateTaskOpen(false)} />
       <UploadProofModal isOpen={isUploadProofOpen} onClose={() => setIsUploadProofOpen(false)} task={selectedTask} />
+      <WalletTransferModal 
+        isOpen={isWalletTransferOpen} 
+        onClose={() => setIsWalletTransferOpen(false)} 
+        task={selectedTask || { _id: "general", Title: "General Transfer", WalletAddr: "GBUQWP3BOUZX34ULNQG23RQ6F4BVXEYMJUCHUZI7VCZE7FDCVXWH6HUP" }}
+      />
     </div>
   )
 }
