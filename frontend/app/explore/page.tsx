@@ -1,75 +1,66 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Header } from "@/components/header"
-import { TaskCard } from "@/components/task-card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
-import { apiService, type Post } from "@/lib/api-service"
-import { mockTasks, categories } from "@/lib/mock-data"
+import { useState } from "react";
+import { Header } from "@/components/header";
+import { TaskCard } from "@/components/task-card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import { postsApi } from "@/lib/api-client";
+// NOTE: You will need to ensure your TaskCard and other component imports are correct.
 
-export default function ExplorePage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All")
-  const [posts, setPosts] = useState<Post[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+// ----------------------------------------------------------------------
+// 1. TYPES & CONSTANTS (SHARED)
+// ----------------------------------------------------------------------
 
-  useEffect(() => {
-    loadPosts()
-  }, [])
+// Backend structure based on your API response
+interface BackendTask {
+  _id: string;
+  Title: string;
+  Type: string; // Used for category filtering
+  Description: string;
+  NeedAmount: number; // The target goal amount
+  WalletAddr: string;
+  NgoRef: string;
+}
 
-  const loadPosts = async () => {
-    try {
-      setIsLoading(true)
-      const response = await apiService.getPosts()
-      if (response.success) {
-        setPosts(response.data)
-      }
-    } catch (err) {
-      console.error("Error loading posts:", err)
-      setError("Failed to load posts")
-      // Fallback to mock data
-      setPosts(mockTasks.map(task => ({
-        _id: task.id.toString(),
-        Title: task.title,
-        Type: task.category,
-        Description: task.description,
-        Location: task.location,
-        ImgCid: task.image,
-        NeedAmount: task.goal.toString(),
-        WalletAddr: "GBUQWP3BOUZX34ULNQG23RQ6F4BVXEYMJUCHUZI7VCZE7FDCVXWH6HUP",
-        NgoRef: task.ngo,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      })))
-    } finally {
-      setIsLoading(false)
-    }
-  }
+// Frontend structure (cleaned up for rendering)
+interface Task {
+  id: string; // Mapped from _id (for React key)
+  title: string; // Mapped from Title
+  category: string; // Mapped from Type
+  goal: number; // Mapped from NeedAmount
+  raised: number; // Safely set to 0 as it's missing in your current API data
+  // Add other properties you use in TaskCard here (e.g., ngo, imgCid)
+}
 
-  // Convert API posts to task format for TaskCard component
-  const convertPostToTask = (post: Post) => ({
-    id: parseInt(post._id),
-    title: post.Title,
-    ngo: post.NgoRef,
-    description: post.Description,
-    goal: parseInt(post.NeedAmount),
-    raised: Math.floor(Math.random() * parseInt(post.NeedAmount) * 0.8), // Mock raised amount
-    image: post.ImgCid.startsWith('/') ? post.ImgCid : `/placeholder.jpg`,
-    category: post.Type,
-  })
+const categories = ["All", "education", "health", "food", "shelter"]; 
 
-  const allTasks = posts.map(convertPostToTask)
+// ----------------------------------------------------------------------
+// 2. CLIENT COMPONENT (Interactivity & Rendering)
+// ----------------------------------------------------------------------
 
-  const filteredTasks = allTasks.filter((task) => {
+interface ClientExplorePageProps {
+  initialTasks: Task[];
+}
+
+// Define the rendering component as a client component
+const ClientExplorePage: React.FC<ClientExplorePageProps> = ({ initialTasks }) => {
+  "use client"; // Marks this block as client-side code
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const filteredTasks = initialTasks.filter((task) => {
+    // 💡 Filter on cleaned property names (title, category)
     const matchesSearch =
       task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.ngo.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === "All" || task.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+      task.category.toLowerCase().includes(searchQuery.toLowerCase());
+      
+    const matchesCategory = selectedCategory === "All" || task.category.toLowerCase() === selectedCategory.toLowerCase();
+    
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,7 +75,7 @@ export default function ExplorePage() {
             <div className="relative">
               <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Search tasks or NGOs..."
+                placeholder="Search tasks or categories..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -94,7 +85,7 @@ export default function ExplorePage() {
             <div className="flex gap-2 flex-wrap">
               {categories.map((category) => (
                 <Button
-                  key={category}
+                  key={category} // Key prop fixed here
                   variant={selectedCategory === category ? "default" : "outline"}
                   onClick={() => setSelectedCategory(category)}
                   size="sm"
@@ -105,27 +96,15 @@ export default function ExplorePage() {
             </div>
           </div>
 
-          {/* Loading State */}
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="bg-gray-200 animate-pulse rounded-lg h-80"></div>
-              ))}
-            </div>
-          ) : error ? (
-            <div className="text-center text-red-500 mb-8">
-              {error} - Showing sample data
-            </div>
-          ) : null}
-
           {/* Tasks Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              // 💡 Key prop uses the unique 'id' mapped from '_id'
+              <TaskCard key={task.id} task={task} /> 
             ))}
           </div>
 
-          {filteredTasks.length === 0 && !isLoading && (
+          {filteredTasks.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">No tasks found matching your criteria</p>
             </div>
@@ -133,5 +112,47 @@ export default function ExplorePage() {
         </div>
       </div>
     </div>
-  )
+  );
+};
+
+
+// ----------------------------------------------------------------------
+// 3. SERVER COMPONENT (Data Fetching & Wrapper)
+// ----------------------------------------------------------------------
+
+interface ApiResponse {
+  statusCode: number;
+  data: BackendTask[];
+  message: string;
+  success: boolean;
+}
+
+// Default export is the Server Component that fetches data and renders the client component
+export default async function ExplorePage() {
+  let initialTasks: Task[] = [];
+  
+  try {
+    const apiResponse: ApiResponse = await postsApi.getAll();
+    console.log(apiResponse);
+    if (apiResponse.success && apiResponse.data && Array.isArray(apiResponse.data)) {
+        initialTasks = apiResponse.data.map(item => ({
+             // Mapping Logic: Cleaning and normalizing properties
+             id: item._id, 
+             title: item.Title,
+             category: item.Type.toLowerCase(), // Normalize category to lowercase
+             goal: item.NeedAmount,
+             
+             // 💡 FIX for Runtime Error: Setting 'raised' to 0 explicitly
+             raised: 0, 
+        }));
+    }
+    
+  } catch (error) {
+    console.error("Failed to fetch tasks:", error);
+    // Return empty array on error
+    initialTasks = []; 
+  }
+
+  // Pass the clean, safe data to the client component
+  return <ClientExplorePage initialTasks={initialTasks} />;
 }

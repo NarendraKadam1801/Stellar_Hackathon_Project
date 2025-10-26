@@ -6,37 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { CreateTaskModal } from "@/components/create-task-modal"
 import { UploadProofModal } from "@/components/upload-proof-modal"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { Plus, Upload, CheckCircle2, Clock } from "lucide-react"
 import { mockNGOs } from "@/lib/mock-data"
-
-// Simple chart component to avoid recharts SSR issues
-const SimpleChart = ({ data }: { data: any[] }) => {
-  const maxValue = Math.max(...data.map(d => d.value))
-  
-  return (
-    <div className="h-[300px] w-full p-4">
-      <div className="flex items-end justify-between h-full gap-2">
-        {data.map((item, index) => (
-          <div key={index} className="flex flex-col items-center flex-1">
-            <div 
-              className="w-full bg-blue-500 rounded-t"
-              style={{ 
-                height: `${(item.value / maxValue) * 200}px`,
-                minHeight: '4px'
-              }}
-            />
-            <div className="text-xs text-muted-foreground mt-2 text-center">
-              {item.name}
-            </div>
-            <div className="text-xs font-medium">
-              {item.value}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export default function NGODashboardPage() {
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
@@ -121,17 +93,17 @@ export default function NGODashboardPage() {
           {/* Chart */}
           <Card className="p-4 md:p-6 mb-8">
             <h2 className="text-lg md:text-xl font-semibold text-foreground mb-4">Donations vs Usage</h2>
-            <SimpleChart data={chartData} />
-            <div className="flex justify-center gap-4 mt-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                <span className="text-sm text-muted-foreground">Donations</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded"></div>
-                <span className="text-sm text-muted-foreground">Usage</span>
-              </div>
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="donations" fill="#2563EB" />
+                <Bar dataKey="usage" fill="#16A34A" />
+              </BarChart>
+            </ResponsiveContainer>
           </Card>
 
           {/* Tasks Management */}

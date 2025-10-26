@@ -6,69 +6,39 @@ import { Header } from "@/components/header"
 import { TaskCard } from "@/components/task-card"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, CheckCircle2, Zap, Shield } from "lucide-react"
-import { apiService, type Post } from "@/lib/api-service"
-import { mockTasks } from "@/lib/mock-data"
-import { AuthModal } from "@/components/auth-modal"
-import { NGOAuthModal } from "@/components/ngo-auth-modal"
-import { useDispatch, useSelector } from "react-redux"
-import type { RootState, AppDispatch } from "@/lib/redux/store"
-import { openAuthModal } from "@/lib/redux/slices/ui-slice"
-import { useNGOAuth } from "@/lib/ngo-auth-context"
+import { postsApi } from "@/lib/api-client"
 
 export default function Home() {
-  const dispatch = useDispatch<AppDispatch>()
-  const { isAuthenticated: ngoAuthenticated } = useNGOAuth()
-  const { isConnected: walletConnected } = useSelector((state: RootState) => state.wallet)
-  const [posts, setPosts] = useState<Post[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [featuredTasks, setFeaturedTasks] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({ totalRaised: 0, activeDonors: 0, verifiedNGOs: 0 })
 
   useEffect(() => {
-    loadPosts()
-  }, [])
+    const fetchFeaturedTasks = async () => {
+      try {
+        setLoading(true)
+        const response = await postsApi.getAll()
+        const posts = response.data || []
+        setFeaturedTasks(posts.slice(0, 3))
 
-  const loadPosts = async () => {
-    try {
-      setIsLoading(true)
-      const response = await apiService.getPosts()
-      if (response.success) {
-        setPosts(response.data)
+        // Calculate stats from posts
+        const totalRaised = posts.reduce((sum, post) => sum + (post.raised || 0), 0)
+        const activeDonors = posts.reduce((sum, post) => sum + (post.donors || 0), 0)
+        setStats({
+          totalRaised,
+          activeDonors,
+          verifiedNGOs: Math.ceil(posts.length / 2),
+        })
+      } catch (error) {
+        console.error("[v0] Error fetching featured tasks:", error)
+        setFeaturedTasks([])
+      } finally {
+        setLoading(false)
       }
-    } catch (err) {
-      console.error("Error loading posts:", err)
-      setError("Failed to load posts")
-      // Fallback to mock data
-      setPosts(mockTasks.map(task => ({
-        _id: task.id.toString(),
-        Title: task.title,
-        Type: task.category,
-        Description: task.description,
-        Location: task.location,
-        ImgCid: task.image,
-        NeedAmount: task.goal.toString(),
-        WalletAddr: "GBUQWP3BOUZX34ULNQG23RQ6F4BVXEYMJUCHUZI7VCZE7FDCVXWH6HUP",
-        NgoRef: task.ngo,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      })))
-    } finally {
-      setIsLoading(false)
     }
-  }
 
-  // Convert API posts to task format for TaskCard component
-  const convertPostToTask = (post: Post) => ({
-    id: parseInt(post._id),
-    title: post.Title,
-    ngo: post.NgoRef,
-    description: post.Description,
-    goal: parseInt(post.NeedAmount),
-    raised: Math.floor(Math.random() * parseInt(post.NeedAmount) * 0.8), // Mock raised amount
-    image: post.ImgCid.startsWith('/') ? post.ImgCid : `/placeholder.jpg`,
-    category: post.Type,
-  })
-
-  const featuredTasks = posts.slice(0, 3).map(convertPostToTask)
+    fetchFeaturedTasks()
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,36 +60,26 @@ export default function Home() {
                   Browse Tasks <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              {ngoAuthenticated ? (
-                <Link href="/ngo/create-post">
-                  <Button size="lg" variant="outline">
-                    Create Task
-                  </Button>
-                </Link>
-              ) : (
-                <Button 
-                  size="lg" 
-                  variant="outline"
-                  onClick={() => dispatch(openAuthModal())}
-                >
-                  Get Started
+              <Link href="/ngo/auth?mode=signup">
+                <Button size="lg" variant="outline">
+                  Create Task
                 </Button>
-              )}
+              </Link>
             </div>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-6 mt-16">
             <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
-              <div className="text-3xl font-bold text-primary">₹12,50,000</div>
+              <div className="text-3xl font-bold text-primary">₹{(stats.totalRaised / 100000).toFixed(2)}L</div>
               <div className="text-muted-foreground">Total Raised</div>
             </div>
             <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
-              <div className="text-3xl font-bold text-accent">1,200+</div>
+              <div className="text-3xl font-bold text-accent">{stats.activeDonors}+</div>
               <div className="text-muted-foreground">Active Donors</div>
             </div>
             <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
-              <div className="text-3xl font-bold text-accent">54</div>
+              <div className="text-3xl font-bold text-accent">{stats.verifiedNGOs}</div>
               <div className="text-muted-foreground">Verified NGOs</div>
             </div>
           </div>
@@ -130,22 +90,21 @@ export default function Home() {
       <section className="py-16 px-4">
         <div className="mx-auto max-w-6xl">
           <h2 className="text-3xl font-bold text-foreground mb-12">Featured Tasks</h2>
-          {isLoading ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Loading featured tasks...</p>
+            </div>
+          ) : featuredTasks.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-gray-200 animate-pulse rounded-lg h-80"></div>
+              {featuredTasks.map((task) => (
+                <TaskCard key={task.id} task={task} />
               ))}
             </div>
-          ) : error ? (
-            <div className="text-center text-red-500 mb-8">
-              {error} - Showing sample data
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No tasks available yet</p>
             </div>
-          ) : null}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {featuredTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
-          </div>
+          )}
         </div>
       </section>
 
@@ -182,10 +141,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Auth Modal */}
-      <AuthModal />
-      <NGOAuthModal />
     </div>
   )
 }

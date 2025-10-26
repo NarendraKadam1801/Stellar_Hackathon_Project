@@ -1,7 +1,6 @@
-// Stellar Utils with Real API Integration
-import { apiService } from './api-service';
+// This simulates Stellar SDK functionality without requiring the actual package
 
-// Mock Stellar SDK classes and functions for frontend compatibility
+// Mock Stellar SDK classes and functions
 const Networks = {
   TESTNET_NETWORK_PASSPHRASE: "Test SDF Network ; September 2015",
 }
@@ -12,41 +11,22 @@ class Server {
   constructor(private url: string) {}
 
   async loadAccount(publicKey: string) {
-    try {
-      // Use real API to get balance
-      const response = await apiService.getWalletBalance(publicKey);
-      const balances = response.data || [];
-      
-      return {
-        id: publicKey,
-        account_id: publicKey,
-        balances: balances.map((balance: any) => ({
-          balance: balance.balance.toString(),
-          asset_type: balance.asset === "XLM" ? "native" : "credit_alphanum4",
-          asset_code: balance.asset !== "XLM" ? balance.asset : undefined,
-          asset_issuer: balance.issuer || undefined,
-        })),
-        sequence: "1",
-      }
-    } catch (error) {
-      console.error("Error loading account:", error);
-      // Fallback to mock data
-      return {
-        id: publicKey,
-        account_id: publicKey,
-        balances: [
-          {
-            balance: "1000.0000000",
-            asset_type: "native",
-          },
-        ],
-        sequence: "1",
-      }
+    // Mock account data
+    return {
+      id: publicKey,
+      account_id: publicKey,
+      balances: [
+        {
+          balance: "1000.0000000",
+          asset_type: "native",
+        },
+      ],
+      sequence: "1",
     }
   }
 
   async submitTransaction(signedTx: any) {
-    // Mock transaction submission - in real implementation, this would submit to Stellar network
+    // Mock transaction submission
     return {
       hash: `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ledger: Math.floor(Math.random() * 1000000),
@@ -110,6 +90,9 @@ const Memo = {
   }),
 }
 
+// NGO wallet address (hardcoded for demo - in production this would be dynamic)
+const NGO_WALLET_ADDRESS = "GBUQWP3BOUZX34ULNQG23RQ6F4BVXEYMJUCHUZI7VCZE7FDCVXWH6HUP"
+
 const server = new Server("https://horizon-testnet.stellar.org")
 const networkPassphrase = Networks.TESTNET_NETWORK_PASSPHRASE
 
@@ -120,11 +103,8 @@ export async function submitDonationTransaction(
   signTransaction: (tx: string) => Promise<string>,
 ) {
   try {
-    console.log("Starting donation transaction:", { publicKey, amount, taskId })
-    
     // Get account details
     const account = await server.loadAccount(publicKey)
-    console.log("Account loaded:", account.id)
 
     // Create transaction
     const transaction = new TransactionBuilder(account, {
@@ -134,7 +114,7 @@ export async function submitDonationTransaction(
       .addMemo(Memo.text(`Donation-${taskId}`))
       .addOperation(
         Operation.payment({
-          destination: "GBUQWP3BOUZX34ULNQG23RQ6F4BVXEYMJUCHUZI7VCZE7FDCVXWH6HUP", // NGO wallet
+          destination: NGO_WALLET_ADDRESS,
           asset: Asset.native(),
           amount: amount,
         }),
@@ -142,24 +122,11 @@ export async function submitDonationTransaction(
       .setTimeout(30)
       .build()
 
-    console.log("Transaction built, signing...")
-    
     // Sign transaction
     const signedTx = await signTransaction(transaction.toEnvelope().toXDR())
-    console.log("Transaction signed:", signedTx)
 
     // Submit to network
     const result = await server.submitTransaction(signedTx)
-    console.log("Transaction submitted:", result)
-
-    // Verify transaction with backend
-    try {
-      await apiService.verifyTransaction(result.hash);
-      console.log("Transaction verified with backend")
-    } catch (error) {
-      console.error("Transaction verification failed:", error);
-      // Don't fail the transaction if verification fails
-    }
 
     return {
       success: true,
@@ -167,52 +134,18 @@ export async function submitDonationTransaction(
       ledger: result.ledger,
     }
   } catch (error) {
-    console.error("Transaction error:", error)
+    console.error("[v0] Transaction error:", error)
     throw error
   }
 }
 
 export async function getAccountBalance(publicKey: string) {
   try {
-    const response = await apiService.getWalletBalance(publicKey);
-    const balances = response.data || [];
-    const xlmBalance = balances.find((b: any) => b.asset === "XLM");
-    return xlmBalance ? Number.parseFloat(xlmBalance.balance) : 0;
+    const account = await server.loadAccount(publicKey)
+    const nativeBalance = account.balances.find((b: any) => b.asset_type === "native")
+    return nativeBalance ? Number.parseFloat(nativeBalance.balance) : 0
   } catch (error) {
     console.error("[v0] Balance fetch error:", error)
-    // Fallback to mock data
-    return 1000; // Mock balance
-  }
-}
-
-// New function to create Stellar account via API
-export async function createStellarAccount() {
-  try {
-    const response = await apiService.createStellarAccount();
-    return response.data;
-  } catch (error) {
-    console.error("Error creating Stellar account:", error);
-    throw error;
-  }
-}
-
-// New function to send payment via API
-export async function sendPaymentViaAPI(
-  senderKey: string,
-  receiverKey: string,
-  amount: number,
-  meta: { cid: string; prevTxn?: string }
-) {
-  try {
-    const response = await apiService.sendPayment({
-      senderKey,
-      receiverKey,
-      amount,
-      meta,
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error sending payment:", error);
-    throw error;
+    return 0
   }
 }

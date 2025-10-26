@@ -28,33 +28,20 @@ export const loginNGO = createAsyncThunk(
   "ngoAuth/login",
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      const { apiService } = await import("@/lib/api-service")
-      const response = await apiService.login({ email, password })
-      
-      if (response.success && response.data) {
-        const { accessToken, refreshToken, userData } = response.data
-        
-        // Set cookies for authentication
-        document.cookie = `accessToken=${accessToken}; path=/; max-age=${7 * 24 * 60 * 60}` // 7 days
-        document.cookie = `refreshToken=${refreshToken}; path=/; max-age=${7 * 24 * 60 * 60}`
-        
-        // Convert backend user data to frontend format
-        const ngoProfile: NGOProfile = {
-          id: userData.Id,
-          name: userData.NgoName,
-          email: userData.Email,
-          registrationNumber: userData.RegNumber,
-          description: userData.Description,
-          createdAt: new Date(userData.createdAt || Date.now()),
-        }
-        
-        // Store NGO profile in cookie
-        document.cookie = `ngo_profile=${encodeURIComponent(JSON.stringify(ngoProfile))}; path=/; max-age=${7 * 24 * 60 * 60}`
-        
-        return ngoProfile
-      } else {
-        throw new Error(response.message || "Login failed")
+      // Simulate API call to backend
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Mock NGO data - in real app, this would come from backend
+      const mockNGO: NGOProfile = {
+        id: "ngo-" + Math.random().toString(36).substr(2, 9),
+        name: "Education for All Foundation",
+        email,
+        registrationNumber: "NGO-2024-001",
+        description: "Providing quality education to underprivileged children",
+        createdAt: new Date(),
       }
+
+      return mockNGO
     } catch (error) {
       const message = error instanceof Error ? error.message : "Login failed"
       return rejectWithValue(message)
@@ -64,42 +51,18 @@ export const loginNGO = createAsyncThunk(
 
 export const signupNGO = createAsyncThunk(
   "ngoAuth/signup",
-  async (ngoData: Omit<NGOProfile, "id" | "createdAt"> & { password: string; phoneNo: string }, { rejectWithValue }) => {
+  async (ngoData: Omit<NGOProfile, "id" | "createdAt">, { rejectWithValue }) => {
     try {
-      const { apiService } = await import("@/lib/api-service")
-      const response = await apiService.signup({
-        ngoName: ngoData.name,
-        regNumber: ngoData.registrationNumber,
-        description: ngoData.description,
-        email: ngoData.email,
-        phoneNo: ngoData.phoneNo,
-        password: ngoData.password,
-      })
-      
-      if (response.success && response.data) {
-        const { accessToken, refreshToken, userData } = response.data
-        
-        // Set cookies for authentication
-        document.cookie = `accessToken=${accessToken}; path=/; max-age=${7 * 24 * 60 * 60}` // 7 days
-        document.cookie = `refreshToken=${refreshToken}; path=/; max-age=${7 * 24 * 60 * 60}`
-        
-        // Convert backend user data to frontend format
-        const ngoProfile: NGOProfile = {
-          id: userData.Id,
-          name: userData.NgoName,
-          email: userData.Email,
-          registrationNumber: userData.RegNumber,
-          description: userData.Description,
-          createdAt: new Date(userData.createdAt || Date.now()),
-        }
-        
-        // Store NGO profile in cookie
-        document.cookie = `ngo_profile=${encodeURIComponent(JSON.stringify(ngoProfile))}; path=/; max-age=${7 * 24 * 60 * 60}`
-        
-        return ngoProfile
-      } else {
-        throw new Error(response.message || "Signup failed")
+      // Simulate API call to backend
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      const newNGO: NGOProfile = {
+        ...ngoData,
+        id: "ngo-" + Math.random().toString(36).substr(2, 9),
+        createdAt: new Date(),
       }
+
+      return newNGO
     } catch (error) {
       const message = error instanceof Error ? error.message : "Signup failed"
       return rejectWithValue(message)
@@ -112,40 +75,12 @@ const ngoAuthSlice = createSlice({
   initialState,
   reducers: {
     logoutNGO: (state) => {
-      // Clear cookies
-      document.cookie = "accessToken=; path=/; max-age=0"
-      document.cookie = "refreshToken=; path=/; max-age=0"
-      document.cookie = "ngo_profile=; path=/; max-age=0"
-      
       state.isAuthenticated = false
       state.ngoProfile = null
       state.error = null
     },
     clearNGOError: (state) => {
       state.error = null
-    },
-    checkNGOCookie: (state) => {
-      // Check if NGO is already logged in via cookies
-      if (typeof window !== "undefined") {
-        const cookies = document.cookie.split("; ").reduce(
-          (acc, cookie) => {
-            const [key, value] = cookie.split("=")
-            acc[key] = value
-            return acc
-          },
-          {} as Record<string, string>,
-        )
-
-        if (cookies.accessToken && cookies.ngo_profile) {
-          try {
-            const profile = JSON.parse(decodeURIComponent(cookies.ngo_profile))
-            state.ngoProfile = profile
-            state.isAuthenticated = true
-          } catch (err) {
-            console.error("Error parsing NGO profile from cookie:", err)
-          }
-        }
-      }
     },
   },
   extraReducers: (builder) => {
@@ -179,5 +114,5 @@ const ngoAuthSlice = createSlice({
   },
 })
 
-export const { logoutNGO, clearNGOError, checkNGOCookie } = ngoAuthSlice.actions
+export const { logoutNGO, clearNGOError } = ngoAuthSlice.actions
 export default ngoAuthSlice.reducer

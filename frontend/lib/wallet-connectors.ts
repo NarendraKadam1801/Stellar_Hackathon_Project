@@ -2,103 +2,20 @@ export const walletConnectors = {
   freighter: {
     name: "Freighter",
     icon: "🔐",
-    isInstalled: () => {
-      if (typeof window === "undefined") return false
-      return !!(window as any).stellar || !!(window as any).freighter
-    },
+    isInstalled: () => typeof window !== "undefined" && !!window.stellar,
     connect: async () => {
-      // Check for modern Freighter API first
-      if ((window as any).stellar) {
-        try {
-          console.log("Using modern Freighter API")
-          const response = await (window as any).stellar.requestAccess({ 
-            domain: window.location.hostname 
-          })
-          console.log("Freighter response:", response)
-          if (response.error) {
-            throw new Error(response.error.message || "Access denied")
-          }
-          if (response.publicKey) {
-            console.log("Connected with public key:", response.publicKey)
-            return response.publicKey
-          }
-          throw new Error("No public key returned")
-        } catch (error) {
-          console.error("Freighter stellar API error:", error)
-          throw error
-        }
-      }
-      
-      // Fallback to legacy Freighter API
-      if ((window as any).freighter) {
-        try {
-          console.log("Using legacy Freighter API")
-          const response = await (window as any).freighter.requestAccess({ 
-            domain: window.location.hostname 
-          })
-          console.log("Legacy Freighter response:", response)
-          if (response.error) {
-            throw new Error(response.error.message || "Access denied")
-          }
-          if (response.publicKey) {
-            console.log("Connected with public key:", response.publicKey)
-            return response.publicKey
-          }
-          throw new Error("No public key returned")
-        } catch (error) {
-          console.error("Freighter legacy API error:", error)
-          throw error
-        }
-      }
-      
-      throw new Error("Freighter wallet not found. Please install Freighter extension from https://freighter.app")
+      if (!window.stellar) throw new Error("Freighter not installed")
+      const response = await window.stellar.requestAccess({ domain: "aidbridge.app" })
+      if (response.error) throw new Error(response.error.message)
+      return response.publicKey
     },
     signTransaction: async (tx: string) => {
-      console.log("Signing transaction with Freighter:", tx)
-      
-      // Check for modern Freighter API first
-      if ((window as any).stellar) {
-        try {
-          const response = await (window as any).stellar.signTransaction(tx, {
-            networkPassphrase: "Test SDF Network ; September 2015",
-          })
-          console.log("Freighter sign response:", response)
-          if (response.error) {
-            throw new Error(response.error.message || "Transaction signing failed")
-          }
-          if (response.signedXDR) {
-            console.log("Transaction signed successfully")
-            return response.signedXDR
-          }
-          throw new Error("No signed XDR returned")
-        } catch (error) {
-          console.error("Freighter sign error:", error)
-          throw error
-        }
-      }
-      
-      // Fallback to legacy Freighter API
-      if ((window as any).freighter) {
-        try {
-          const response = await (window as any).freighter.signTransaction(tx, {
-            networkPassphrase: "Test SDF Network ; September 2015",
-          })
-          console.log("Legacy Freighter sign response:", response)
-          if (response.error) {
-            throw new Error(response.error.message || "Transaction signing failed")
-          }
-          if (response.signedXDR) {
-            console.log("Transaction signed successfully")
-            return response.signedXDR
-          }
-          throw new Error("No signed XDR returned")
-        } catch (error) {
-          console.error("Legacy Freighter sign error:", error)
-          throw error
-        }
-      }
-      
-      throw new Error("Freighter not available for signing")
+      if (!window.stellar) throw new Error("Freighter not available")
+      const response = await window.stellar.signTransaction(tx, {
+        networkPassphrase: "Test SDF Network ; September 2015",
+      })
+      if (response.error) throw new Error(response.error.message)
+      return response.signedXDR
     },
   },
 

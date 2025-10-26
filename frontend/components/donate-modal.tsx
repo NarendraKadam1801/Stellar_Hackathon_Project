@@ -6,10 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { CheckCircle2, Loader2, TrendingUp, AlertCircle } from "lucide-react"
 import { getExchangeRate, convertRsToXlm } from "@/lib/exchange-rates"
-import { useSelector } from "react-redux"
-import type { RootState } from "@/lib/redux/store"
+import { useWallet } from "@/lib/wallet-context"
 import { submitDonationTransaction } from "@/lib/stellar-utils"
-import { apiService } from "@/lib/api-service"
 
 interface DonateModalProps {
   isOpen: boolean
@@ -18,7 +16,7 @@ interface DonateModalProps {
 }
 
 export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
-  const { isConnected, publicKey, walletType } = useSelector((state: RootState) => state.wallet)
+  const { isConnected, publicKey, signTransaction } = useWallet()
   const [step, setStep] = useState<"amount" | "confirm" | "success" | "error">("amount")
   const [amount, setAmount] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
@@ -45,7 +43,7 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
   }, [])
 
   const handleConfirm = async () => {
-    if (!isConnected || !publicKey || !walletType) {
+    if (!isConnected || !publicKey) {
       setError("Please connect your wallet first")
       return
     }
@@ -54,43 +52,7 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
     setError("")
 
     try {
-      console.log("Starting donation process:", {
-        publicKey,
-        amount: stellarAmount.toFixed(7),
-        taskId: task.id,
-        isConnected,
-        walletType
-      })
-
-      // Import wallet connectors
-      const { walletConnectors } = await import("@/lib/wallet-connectors")
-      const connector = walletConnectors[walletType]
-      
-      if (!connector) {
-        throw new Error("Wallet connector not found")
-      }
-
-      // Submit transaction to Stellar network
-      const result = await submitDonationTransaction(
-        publicKey, 
-        stellarAmount.toFixed(7), 
-        task.id, 
-        connector.signTransaction
-      )
-      console.log("Transaction result:", result)
-
-      // Verify and save donation with backend
-      try {
-        await apiService.verifyDonation({
-          TransactionId: result.hash,
-          postID: task.id.toString(),
-          Amount: Number.parseFloat(amount)
-        })
-        console.log("Donation verified with backend")
-      } catch (verifyError) {
-        console.error("Donation verification failed:", verifyError)
-        // Don't fail the transaction if verification fails
-      }
+      const result = await submitDonationTransaction(publicKey, stellarAmount.toFixed(7), task.id, signTransaction)
 
       setTxHash(result.hash)
       setStep("success")
@@ -98,7 +60,7 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
       const message = err instanceof Error ? err.message : "Transaction failed"
       setError(message)
       setStep("error")
-      console.error("Donation error:", message)
+      console.error("[v0] Donation error:", message)
     } finally {
       setIsProcessing(false)
     }

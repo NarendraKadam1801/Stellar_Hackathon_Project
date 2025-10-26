@@ -48,7 +48,7 @@ const normalizeAndValidateUserData = (data: any): userSingupData => {
 const singup = AsyncHandler(async (req: Request, res: Response) => {
   const rawData = req.body;
   if (!rawData) throw new ApiError(400, "Invalid data");
-  
+  console.log(rawData)
   // Normalize and validate the data
   const userData = normalizeAndValidateUserData(rawData);
   
@@ -79,8 +79,8 @@ const singup = AsyncHandler(async (req: Request, res: Response) => {
     // Save user data with blockchain keys
     const SaveData = await saveDataAndToken(userDataWithKeys);
     if(!SaveData) throw new ApiError(500, `Something went wrong while saving data: ${SaveData}`);
-    
-    return res.status(200).json(new ApiResponse(200, {
+    const { accessToken, refreshToken } = SaveData;
+    return res.status(200).cookie('accessToken',accessToken).cookie('refreshToken',refreshToken).json(new ApiResponse(200, {
       ...SaveData,
       blockchainAccount: {
         publicKey: stellarAccount.publicKey,
@@ -99,10 +99,12 @@ const singup = AsyncHandler(async (req: Request, res: Response) => {
 
 
 const login=AsyncHandler(async (req:Request,res:Response)=>{
+    console.log(req.body);
     const userData:userLoginData=req.body;
     if(!userData) throw new ApiError(400,"invalid data");
     const dataCheck:any=await findUserWithTokenAndPassCheck(userData);
     if(!dataCheck) throw new ApiError(500,`something went wrong while checking ${dataCheck}`);
+    console.log(dataCheck)
     const {accessToken,refreshToken}=dataCheck;
     return res.status(200).cookie('accessToken',accessToken).cookie('refreshToken',refreshToken).json(new ApiResponse(200,dataCheck,"user confirm"));
 })
@@ -124,13 +126,16 @@ const refreshToken = AsyncHandler(async (req: Request, res: Response) => {
         }
 
         // Find user by ID
-        const user = await findUser({ id: decoded.id });
+        const user = await findUser({ Id: decoded.id });
         if (!user || user.length === 0) {
             throw new ApiError(401, "User not found");
         }
 
         // Generate new tokens
         const userDoc = user[0];
+        if (!userDoc) {
+            throw new ApiError(401, "User document not found");
+        }
         const { accessToken, refreshToken: newRefreshToken } = await userDoc.generateTokens();
 
         // Set new cookies
@@ -154,7 +159,7 @@ const refreshToken = AsyncHandler(async (req: Request, res: Response) => {
                 Email: userDoc.Email,
                 RegNumber: userDoc.RegNumber,
                 Description: userDoc.Description,
-                createdAt: userDoc.createdAt
+                // createdAt: userDoc.createdAt // Removed because property does not exist
             }
         }, "Token refreshed successfully"));
 

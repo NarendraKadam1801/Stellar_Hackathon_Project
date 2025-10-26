@@ -7,9 +7,12 @@ import type { RootState } from "@/lib/redux/store"
 import { useNGOAuth } from "@/lib/ngo-auth-context"
 import { AuthModal } from "./auth-modal"
 
-export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false)
+interface AuthGuardProps {
+  children: React.ReactNode
+}
 
+export function AuthGuard({ children }: AuthGuardProps) {
+  const [mounted, setMounted] = useState(false)
   const walletState = useSelector((state: RootState) => state.wallet)
   const ngoAuth = useNGOAuth()
 
@@ -17,11 +20,22 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     setMounted(true)
   }, [])
 
+  // Don't render auth logic on server or until mounted (prevents hydration issues)
   if (!mounted) {
-    return <>{children}</>
+    return <div suppressHydrationWarning>{children}</div>
   }
 
-  // Don't force auth modal - let users browse freely
-  // Auth modal will be shown when they try to donate or create tasks
-  return <>{children}</>
+  const isWalletConnected = walletState?.isConnected ?? false
+  const isNGOAuthenticated = ngoAuth?.isAuthenticated ?? false
+  const shouldShowAuth = !isWalletConnected && !isNGOAuthenticated
+
+  return (
+    <>
+      {children}
+      {shouldShowAuth && <AuthModal />}
+    </>
+  )
 }
+
+// Named export (primary)
+export default AuthGuard

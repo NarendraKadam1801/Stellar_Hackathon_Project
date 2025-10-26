@@ -7,6 +7,7 @@ const pinata=new PinataSDK({
 });
 
 
+
 const retriveFromIpfs=async(cid:string)=>{
     try {
         const data=await pinata.gateways.public.get(cid);
@@ -45,10 +46,10 @@ const uploadOnIpfs=async(data:Object)=>{
 
 const uploadOnIpfsBill=async(data:Express.Multer.File)=>{
     try {
+        console.log(data.path);
         const fileBuffer = fs.readFileSync(data.path);
-        const file = new File([fileBuffer], data.originalname, { type: data.mimetype });
+        const file = new File([fileBuffer], data.originalname,{ type: "text/plain" });
         const uploadData=await pinata.upload.public.file(file);
-
         if(!uploadData) throw new Error("Something went wrong while uploading data to IPFS");
         return {
             success:true,

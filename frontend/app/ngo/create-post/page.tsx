@@ -275,7 +275,7 @@ export default function CreatePostPage() {
                 <div className="space-y-2">
                   <p className="font-semibold text-foreground">{formData.title}</p>
                   <p className="text-sm text-muted-foreground">Goal: ₹{Number(formData.goal).toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">NGO: {ngoProfile?.name}</p>
+                  <p className="text-sm text-muted-foreground">NGO: {ngoProfile?.NgoName}</p>
                 </div>
               </div>
 

@@ -10,37 +10,17 @@ import type { WalletType } from "@/lib/wallet-types"
 interface WalletSelectorProps {
   isOpen: boolean
   onClose: () => void
-  onSelect?: (walletType: WalletType) => void
 }
 
-export function WalletSelector({ isOpen, onClose, onSelect }: WalletSelectorProps) {
+export function WalletSelector({ isOpen, onClose }: WalletSelectorProps) {
   const dispatch = useDispatch<AppDispatch>()
   const { isConnecting, error } = useSelector((state: RootState) => state.wallet)
   const [selectedError, setSelectedError] = useState<string | null>(null)
-  const [debugInfo, setDebugInfo] = useState<string>("")
 
   const handleConnect = async (walletType: WalletType) => {
     setSelectedError(null)
-    setDebugInfo("")
-    
-    // Debug info for Freighter
-    if (walletType === "freighter") {
-      const debug = {
-        windowStellar: !!(window as any).stellar,
-        windowFreighter: !!(window as any).freighter,
-        windowFreighterApi: !!(window as any).freighterApi,
-        windowStellarFreighter: !!(window as any).StellarFreighter,
-        userAgent: navigator.userAgent,
-        location: window.location.hostname
-      }
-      setDebugInfo(`Debug: stellar=${debug.windowStellar}, freighter=${debug.windowFreighter}, freighterApi=${debug.windowFreighterApi}, StellarFreighter=${debug.windowStellarFreighter}`)
-    }
-    
     try {
       await dispatch(connectWallet(walletType)).unwrap()
-      if (onSelect) {
-        onSelect(walletType)
-      }
       onClose()
     } catch (err) {
       setSelectedError(err instanceof Error ? err.message : "Connection failed")
@@ -115,14 +95,6 @@ export function WalletSelector({ isOpen, onClose, onSelect }: WalletSelectorProp
           <div className="px-6 pb-6">
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
               {error || selectedError}
-            </div>
-          </div>
-        )}
-
-        {debugInfo && (
-          <div className="px-6 pb-6">
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-              {debugInfo}
             </div>
           </div>
         )}

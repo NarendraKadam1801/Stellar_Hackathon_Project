@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { useMounted } from "@/hooks/use-mounted"
 
 interface TaskCardProps {
   task: {
@@ -13,29 +12,28 @@ interface TaskCardProps {
     title: string
     ngo: string
     description: string
-    goal: number
-    raised: number
+    goal: number | undefined | null // Expanded type definition for safety
+    raised: number | undefined | null // Expanded type definition for safety
     image: string
     category: string
   }
 }
 
 export function TaskCard({ task }: TaskCardProps) {
-  const mounted = useMounted()
-  const progressPercent = (task.raised / task.goal) * 100
-
-  // Custom number formatting to avoid hydration mismatches
-  const formatNumber = (num: number) => {
-    if (!mounted) {
-      // Return a consistent format during SSR
-      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-    }
-    return num.toLocaleString()
-  }
+  // 💡 FIX: Safely assign default values (0) using Nullish Coalescing (??)
+  const safeRaised = task.raised ?? 0;
+  const safeGoal = task.goal ?? 0;
+  
+  // Prevent division by zero if goal is 0 or missing
+  const progressPercent = safeGoal > 0 ? (safeRaised / safeGoal) * 100 : 0;
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition">
-      <img src={task.image || "/placeholder.svg"} alt={task.title} className="w-full h-48 object-cover" />
+      <img 
+        src={task.image || "/placeholder.svg"} 
+        alt={task.title} 
+        className="w-full h-48 object-cover" 
+      />
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <h3 className="font-semibold text-foreground line-clamp-2">{task.title}</h3>
@@ -48,16 +46,18 @@ export function TaskCard({ task }: TaskCardProps) {
 
         <div className="mb-4">
           <div className="flex justify-between text-sm mb-2">
-            <span className="font-semibold">₹{formatNumber(task.raised)}</span>
-            <span className="text-muted-foreground">₹{formatNumber(task.goal)}</span>
+            {/* 💡 FIX APPLIED: Use safeRaised/safeGoal */}
+            <span className="font-semibold">₹{safeRaised.toLocaleString()}</span> 
+            <span className="text-muted-foreground">₹{safeGoal.toLocaleString()}</span>
           </div>
           <Progress value={progressPercent} className="h-2" />
+          <p className="text-xs text-muted-foreground mt-1 text-right">
+            {Math.round(progressPercent)}% Funded
+          </p>
         </div>
 
         <Link href={`/task/${task.id}`}>
-          <Button className="w-full bg-primary hover:bg-primary/90">
-            {task.raised >= task.goal ? "Completed" : "Donate"}
-          </Button>
+          <Button className="w-full bg-primary hover:bg-primary/90">Donate</Button>
         </Link>
       </div>
     </Card>

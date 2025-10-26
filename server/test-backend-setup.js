@@ -3,10 +3,14 @@
  * This script sets up a test environment for the AidBridge server
  */
 
-const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+import mongoose from "mongoose";
+import { MongoMemoryServer } from "mongodb-memory-server";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+
+// your rest of code here...
+console.log("Mongo, JWT, and bcrypt loaded successfully");
+
 
 // Test configuration
 const TEST_CONFIG = {
