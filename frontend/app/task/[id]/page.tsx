@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { DonateModal } from "@/components/donate-modal"
+import { SimpleDonateModal } from "@/components/simple-donate-modal"
 import { DonationsList } from "@/components/donations-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
@@ -188,7 +189,7 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      <DonateModal isOpen={isDonateOpen} onClose={() => setIsDonateOpen(false)} task={task} />
+      <SimpleDonateModal isOpen={isDonateOpen} onClose={() => setIsDonateOpen(false)} task={task} />
     </div>
   )
 }

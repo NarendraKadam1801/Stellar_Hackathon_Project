@@ -4,30 +4,23 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { CheckCircle2, Loader2, TrendingUp, AlertCircle } from "lucide-react"
-import { getExchangeRate, convertRsToXlm } from "@/lib/exchange-rates"
-import { useWallet } from "@/lib/wallet-context"
-import { submitDonationTransaction } from "@/lib/stellar-utils"
+import { CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 import { paymentApi } from "@/lib/api-client"
 
-interface DonateModalProps {
+interface SimpleDonateModalProps {
   isOpen: boolean
   onClose: () => void
   task: any
 }
 
-export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
-  const { isConnected, publicKey, signTransaction } = useWallet()
+export function SimpleDonateModal({ isOpen, onClose, task }: SimpleDonateModalProps) {
   const [step, setStep] = useState<"amount" | "confirm" | "success" | "error">("amount")
   const [amount, setAmount] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [txHash, setTxHash] = useState("")
-  const [exchangeRate, setExchangeRate] = useState(15)
-  const [isLoadingRate, setIsLoadingRate] = useState(false)
   const [error, setError] = useState("")
 
   const presetAmounts = [50, 100, 200, 500]
-  const stellarAmount = amount ? convertRsToXlm(Number.parseFloat(amount), exchangeRate) : 0
 
   // Get task ID from different possible field names
   const getTaskId = () => {
@@ -40,20 +33,6 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
     return task?.Title || task?.title || "Task"
   }
 
-  useEffect(() => {
-    const fetchRate = async () => {
-      setIsLoadingRate(true)
-      const rate = await getExchangeRate()
-      setExchangeRate(rate)
-      setIsLoadingRate(false)
-    }
-
-    fetchRate()
-    const interval = setInterval(fetchRate, 30000)
-
-    return () => clearInterval(interval)
-  }, [])
-
   const handleConfirm = async () => {
     const taskId = getTaskId()
     
@@ -63,18 +42,11 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
       return
     }
 
-    if (!isConnected || !publicKey) {
-      setError("Please connect your wallet first")
-      setStep("error")
-      return
-    }
-
     setIsProcessing(true)
     setError("")
 
     try {
-      // For now, let's create a mock transaction ID for testing
-      // In a real implementation, you would integrate with Stellar here
+      // Create a mock transaction ID for testing
       const mockTransactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       
       // Verify donation with backend using payment API
@@ -94,7 +66,7 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
       const message = err instanceof Error ? err.message : "Donation failed"
       setError(message)
       setStep("error")
-      console.error("[v0] Donation error:", message)
+      console.error("Donation error:", message)
     } finally {
       setIsProcessing(false)
     }
@@ -116,19 +88,12 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
             {step === "amount" && "Enter Donation Amount"}
             {step === "confirm" && "Confirm Donation"}
             {step === "success" && "Donation Successful"}
-            {step === "error" && "Transaction Failed"}
+            {step === "error" && "Donation Failed"}
           </DialogTitle>
         </DialogHeader>
 
         {step === "amount" && (
           <div className="space-y-4">
-            {!isConnected && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-2">
-                <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-yellow-800">Please connect your wallet to donate</p>
-              </div>
-            )}
-
             <div>
               <label className="text-sm font-medium text-foreground">Amount (₹)</label>
               <Input
@@ -137,23 +102,7 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="mt-2"
-                disabled={!isConnected}
               />
-              {amount && (
-                <div className="mt-3 p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">Stellar Equivalent</p>
-                    <div className="flex items-center gap-1 text-xs text-blue-600">
-                      <TrendingUp className="h-3 w-3" />
-                      {isLoadingRate ? <span className="animate-pulse">Updating...</span> : <span>Live Rate</span>}
-                    </div>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-600 transition-all duration-300">
-                    {stellarAmount.toFixed(4)} XLM
-                  </p>
-                  <p className="text-xs text-muted-foreground">1 XLM = ₹{exchangeRate.toFixed(2)}</p>
-                </div>
-              )}
             </div>
 
             <div>
@@ -165,7 +114,6 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
                     variant={amount === preset.toString() ? "default" : "outline"}
                     onClick={() => setAmount(preset.toString())}
                     className="text-sm"
-                    disabled={!isConnected}
                   >
                     ₹{preset}
                   </Button>
@@ -175,7 +123,7 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
 
             <Button
               onClick={() => setStep("confirm")}
-              disabled={!amount || !isConnected}
+              disabled={!amount}
               className="w-full bg-primary hover:bg-primary/90"
             >
               Continue
@@ -190,12 +138,6 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
               <p className="text-2xl font-bold text-foreground">₹{amount}</p>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-              <p className="text-sm text-muted-foreground">Amount (Stellar)</p>
-              <p className="text-2xl font-bold text-blue-600">{stellarAmount.toFixed(4)} XLM</p>
-              <p className="text-xs text-muted-foreground mt-2">Exchange Rate: 1 XLM = ₹{exchangeRate.toFixed(2)}</p>
-            </div>
-
             <div className="bg-slate-50 rounded-lg p-4">
               <p className="text-sm text-muted-foreground">Task</p>
               <p className="font-semibold text-foreground">{getTaskTitle()}</p>
@@ -205,10 +147,10 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing Transaction...
+                  Processing Donation...
                 </>
               ) : (
-                "Sign with Wallet"
+                "Confirm Donation"
               )}
             </Button>
           </div>
@@ -217,24 +159,19 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
         {step === "success" && (
           <div className="space-y-4 text-center">
             <div className="flex justify-center">
-              <CheckCircle2 className="h-12 w-12 text-accent" />
+              <CheckCircle2 className="h-12 w-12 text-green-600" />
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">Donation Amount (INR)</p>
+              <p className="text-sm text-muted-foreground">Donation Amount</p>
               <p className="text-3xl font-bold text-foreground">₹{amount}</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-              <p className="text-sm text-muted-foreground">Donation Amount (Stellar)</p>
-              <p className="text-2xl font-bold text-blue-600">{stellarAmount.toFixed(4)} XLM</p>
             </div>
 
             <div className="bg-slate-50 rounded-lg p-4 text-left">
               <p className="text-xs text-muted-foreground mb-1">Transaction ID</p>
               <p className="font-mono text-xs text-foreground break-all">{txHash}</p>
               <p className="text-xs text-muted-foreground mt-2">
-                Donation recorded successfully! This is a test transaction.
+                Donation recorded successfully!
               </p>
             </div>
 
@@ -251,7 +188,7 @@ export function DonateModal({ isOpen, onClose, task }: DonateModalProps) {
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
               <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-red-900">Transaction Failed</p>
+                <p className="font-semibold text-red-900">Donation Failed</p>
                 <p className="text-sm text-red-700 mt-1">{error}</p>
               </div>
             </div>
