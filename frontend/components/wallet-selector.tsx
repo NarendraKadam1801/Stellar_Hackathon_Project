@@ -10,9 +10,10 @@ import type { WalletType } from "@/lib/wallet-types"
 interface WalletSelectorProps {
   isOpen: boolean
   onClose: () => void
+  onSelect?: (walletType: WalletType) => void
 }
 
-export function WalletSelector({ isOpen, onClose }: WalletSelectorProps) {
+export function WalletSelector({ isOpen, onClose, onSelect }: WalletSelectorProps) {
   const dispatch = useDispatch<AppDispatch>()
   const { isConnecting, error } = useSelector((state: RootState) => state.wallet)
   const [selectedError, setSelectedError] = useState<string | null>(null)
@@ -37,6 +38,9 @@ export function WalletSelector({ isOpen, onClose }: WalletSelectorProps) {
     
     try {
       await dispatch(connectWallet(walletType)).unwrap()
+      if (onSelect) {
+        onSelect(walletType)
+      }
       onClose()
     } catch (err) {
       setSelectedError(err instanceof Error ? err.message : "Connection failed")

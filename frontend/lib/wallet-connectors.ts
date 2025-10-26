@@ -4,55 +4,101 @@ export const walletConnectors = {
     icon: "🔐",
     isInstalled: () => {
       if (typeof window === "undefined") return false
-      
-      // Check multiple possible Freighter API locations
-      const freighterAPIs = [
-        (window as any).stellar,
-        (window as any).freighter,
-        (window as any).freighterApi,
-        (window as any).StellarFreighter,
-        (window as any).stellarFreighter
-      ]
-      
-      return freighterAPIs.some(api => !!api)
+      return !!(window as any).stellar || !!(window as any).freighter
     },
     connect: async () => {
       // Check for modern Freighter API first
       if ((window as any).stellar) {
-        const response = await (window as any).stellar.requestAccess({ domain: window.location.hostname })
-        if (response.error) throw new Error(response.error.message)
-        return response.publicKey
+        try {
+          console.log("Using modern Freighter API")
+          const response = await (window as any).stellar.requestAccess({ 
+            domain: window.location.hostname 
+          })
+          console.log("Freighter response:", response)
+          if (response.error) {
+            throw new Error(response.error.message || "Access denied")
+          }
+          if (response.publicKey) {
+            console.log("Connected with public key:", response.publicKey)
+            return response.publicKey
+          }
+          throw new Error("No public key returned")
+        } catch (error) {
+          console.error("Freighter stellar API error:", error)
+          throw error
+        }
       }
       
       // Fallback to legacy Freighter API
       if ((window as any).freighter) {
-        const response = await (window as any).freighter.requestAccess({ domain: window.location.hostname })
-        if (response.error) throw new Error(response.error.message)
-        return response.publicKey
+        try {
+          console.log("Using legacy Freighter API")
+          const response = await (window as any).freighter.requestAccess({ 
+            domain: window.location.hostname 
+          })
+          console.log("Legacy Freighter response:", response)
+          if (response.error) {
+            throw new Error(response.error.message || "Access denied")
+          }
+          if (response.publicKey) {
+            console.log("Connected with public key:", response.publicKey)
+            return response.publicKey
+          }
+          throw new Error("No public key returned")
+        } catch (error) {
+          console.error("Freighter legacy API error:", error)
+          throw error
+        }
       }
       
-      throw new Error("Freighter not installed")
+      throw new Error("Freighter wallet not found. Please install Freighter extension from https://freighter.app")
     },
     signTransaction: async (tx: string) => {
+      console.log("Signing transaction with Freighter:", tx)
+      
       // Check for modern Freighter API first
       if ((window as any).stellar) {
-        const response = await (window as any).stellar.signTransaction(tx, {
-          networkPassphrase: "Test SDF Network ; September 2015",
-        })
-        if (response.error) throw new Error(response.error.message)
-        return response.signedXDR
+        try {
+          const response = await (window as any).stellar.signTransaction(tx, {
+            networkPassphrase: "Test SDF Network ; September 2015",
+          })
+          console.log("Freighter sign response:", response)
+          if (response.error) {
+            throw new Error(response.error.message || "Transaction signing failed")
+          }
+          if (response.signedXDR) {
+            console.log("Transaction signed successfully")
+            return response.signedXDR
+          }
+          throw new Error("No signed XDR returned")
+        } catch (error) {
+          console.error("Freighter sign error:", error)
+          throw error
+        }
       }
       
       // Fallback to legacy Freighter API
       if ((window as any).freighter) {
-        const response = await (window as any).freighter.signTransaction(tx, {
-          networkPassphrase: "Test SDF Network ; September 2015",
-        })
-        if (response.error) throw new Error(response.error.message)
-        return response.signedXDR
+        try {
+          const response = await (window as any).freighter.signTransaction(tx, {
+            networkPassphrase: "Test SDF Network ; September 2015",
+          })
+          console.log("Legacy Freighter sign response:", response)
+          if (response.error) {
+            throw new Error(response.error.message || "Transaction signing failed")
+          }
+          if (response.signedXDR) {
+            console.log("Transaction signed successfully")
+            return response.signedXDR
+          }
+          throw new Error("No signed XDR returned")
+        } catch (error) {
+          console.error("Legacy Freighter sign error:", error)
+          throw error
+        }
       }
       
-      throw new Error("Freighter not available")
+      throw new Error("Freighter not available for signing")
     },
   },
 

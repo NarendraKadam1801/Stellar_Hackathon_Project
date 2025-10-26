@@ -1,18 +1,67 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { TaskCard } from "@/components/task-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
+import { apiService, type Post } from "@/lib/api-service"
 import { mockTasks, categories } from "@/lib/mock-data"
 
 export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
+  const [posts, setPosts] = useState<Post[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const allTasks = mockTasks
+  useEffect(() => {
+    loadPosts()
+  }, [])
+
+  const loadPosts = async () => {
+    try {
+      setIsLoading(true)
+      const response = await apiService.getPosts()
+      if (response.success) {
+        setPosts(response.data)
+      }
+    } catch (err) {
+      console.error("Error loading posts:", err)
+      setError("Failed to load posts")
+      // Fallback to mock data
+      setPosts(mockTasks.map(task => ({
+        _id: task.id.toString(),
+        Title: task.title,
+        Type: task.category,
+        Description: task.description,
+        Location: task.location,
+        ImgCid: task.image,
+        NeedAmount: task.goal.toString(),
+        WalletAddr: "GBUQWP3BOUZX34ULNQG23RQ6F4BVXEYMJUCHUZI7VCZE7FDCVXWH6HUP",
+        NgoRef: task.ngo,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Convert API posts to task format for TaskCard component
+  const convertPostToTask = (post: Post) => ({
+    id: parseInt(post._id),
+    title: post.Title,
+    ngo: post.NgoRef,
+    description: post.Description,
+    goal: parseInt(post.NeedAmount),
+    raised: Math.floor(Math.random() * parseInt(post.NeedAmount) * 0.8), // Mock raised amount
+    image: post.ImgCid.startsWith('/') ? post.ImgCid : `/placeholder.jpg`,
+    category: post.Type,
+  })
+
+  const allTasks = posts.map(convertPostToTask)
 
   const filteredTasks = allTasks.filter((task) => {
     const matchesSearch =
@@ -56,6 +105,19 @@ export default function ExplorePage() {
             </div>
           </div>
 
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-gray-200 animate-pulse rounded-lg h-80"></div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500 mb-8">
+              {error} - Showing sample data
+            </div>
+          ) : null}
+
           {/* Tasks Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTasks.map((task) => (
@@ -63,7 +125,7 @@ export default function ExplorePage() {
             ))}
           </div>
 
-          {filteredTasks.length === 0 && (
+          {filteredTasks.length === 0 && !isLoading && (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">No tasks found matching your criteria</p>
             </div>

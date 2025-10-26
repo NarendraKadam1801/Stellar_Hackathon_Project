@@ -55,7 +55,7 @@ const walletPay = AsyncHandler(async (req: Request, res: Response) => {
     receiverKey: senderWallet.PublicKey,
     amount: senderWallet.Amount,
     meta: {
-      cid: senderWallet.Cid,
+      cid: senderWallet.Cid||"Pending",
       prevTxn: prevTxn,
     },
   });

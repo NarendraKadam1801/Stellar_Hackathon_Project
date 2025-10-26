@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-import { useAccount } from "@/hooks/use-account"
 import { useMounted } from "@/hooks/use-mounted"
 import { ConnectButton } from "./connect-button"
 import { useDispatch, useSelector } from "react-redux"
@@ -12,9 +11,8 @@ import { Wallet, LogOut } from "lucide-react"
 
 export function WalletData() {
   const mounted = useMounted()
-  const account = useAccount()
   const dispatch = useDispatch<AppDispatch>()
-  const { balance, walletType } = useSelector((state: RootState) => state.wallet)
+  const { isConnected, publicKey, balance, walletType } = useSelector((state: RootState) => state.wallet)
 
   const handleDisconnect = () => {
     dispatch(disconnectWallet())
@@ -28,7 +26,7 @@ export function WalletData() {
     )
   }
 
-  if (!account) {
+  if (!isConnected || !publicKey) {
     return <ConnectButton label="Connect Wallet" />
   }
 
@@ -51,7 +49,9 @@ export function WalletData() {
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 px-3 py-2 bg-accent rounded-lg">
           <Wallet className="h-4 w-4" />
-          <span className="text-sm font-medium">{account.displayName}</span>
+          <span className="text-sm font-medium">
+            {publicKey.slice(0, 6)}...{publicKey.slice(-4)}
+          </span>
         </div>
         
         <Button

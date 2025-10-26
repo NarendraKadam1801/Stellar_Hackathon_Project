@@ -104,11 +104,12 @@ NgoSchema.methods.generateAccessToken = function (): string {
   return jwt.sign(
     {
       id: this._id,
+      userId: this._id, // Add userId for middleware compatibility
       email: this.Email,
       NgoName: this.NgoName,
       walletAddr: this.PublicKey,
     },
-    secret as string,
+    secret,
     {
       expiresIn: process.env.ATE || "15m", // Default 15 minutes
     }
@@ -127,7 +128,7 @@ NgoSchema.methods.generateRefreshToken = function (): string {
       id: this._id,
       walletAddr: this.PublicKey,
     },
-    secret as string,
+    secret,
     {
       expiresIn: process.env.RTE || "7d", // Default 7 days
     }

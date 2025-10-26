@@ -4,7 +4,6 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ReduxProvider } from "@/lib/redux-provider"
 import { AuthGuard } from "@/components/auth-guard"
-import { WalletProvider } from "@/lib/wallet-context"
 import { NGOAuthProvider } from "@/lib/ngo-auth-context"
 import "./globals.css"
 
@@ -27,12 +26,10 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         <ReduxProvider>
           <NGOAuthProvider>
-            <WalletProvider>
-              <AuthGuard>
-                {children}
-                <Analytics />
-              </AuthGuard>
-            </WalletProvider>
+            <AuthGuard>
+              {children}
+              <Analytics />
+            </AuthGuard>
           </NGOAuthProvider>
         </ReduxProvider>
       </body>

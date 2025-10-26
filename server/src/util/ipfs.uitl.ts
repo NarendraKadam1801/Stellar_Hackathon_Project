@@ -11,7 +11,7 @@ const isValidCid=async(cid:string)=>{
 const ImgFormater=async(cid:string)=>{
     try {
         const ImgUrl=`https://${process.env.PINATA_GATEWAY}/ipfs/${cid}`;
-        if(!ImgUrl) throw new Error("NO image url");
+        if(!ImgUrl) throw new Error("Failed to generate image URL");
         return ImgUrl
     } catch (error) {
         return {

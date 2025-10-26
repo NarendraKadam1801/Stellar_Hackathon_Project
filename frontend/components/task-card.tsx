@@ -55,7 +55,9 @@ export function TaskCard({ task }: TaskCardProps) {
         </div>
 
         <Link href={`/task/${task.id}`}>
-          <Button className="w-full bg-primary hover:bg-primary/90">Donate</Button>
+          <Button className="w-full bg-primary hover:bg-primary/90">
+            {task.raised >= task.goal ? "Completed" : "Donate"}
+          </Button>
         </Link>
       </div>
     </Card>

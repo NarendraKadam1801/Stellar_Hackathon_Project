@@ -4,11 +4,12 @@ import Link from "next/link"
 import { useSelector } from "react-redux"
 import type { RootState } from "@/lib/redux/store"
 import { WalletData } from "./wallet-data"
+import { StellarPriceDisplay } from "./stellar-price-display"
 import { useNGOAuth } from "@/lib/ngo-auth-context"
 
 export function Header() {
   const { error } = useSelector((state: RootState) => state.wallet)
-  const { isAuthenticated, ngoProfile } = useNGOAuth()
+  const { isAuthenticated, ngoProfile, logout } = useNGOAuth()
 
   return (
     <>
@@ -36,10 +37,19 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-3">
+            <StellarPriceDisplay />
             {isAuthenticated && ngoProfile && (
-              <div className="text-right hidden sm:block">
-                <p className="text-xs text-muted-foreground">NGO</p>
-                <p className="text-sm font-semibold text-foreground">{ngoProfile.name}</p>
+              <div className="flex items-center gap-3">
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs text-muted-foreground">NGO</p>
+                  <p className="text-sm font-semibold text-foreground">{ngoProfile.name}</p>
+                </div>
+                <button
+                  onClick={logout}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Logout
+                </button>
               </div>
             )}
             <WalletData />

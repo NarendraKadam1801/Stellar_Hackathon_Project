@@ -9,22 +9,25 @@ interface userData {
 
 const findUser = async (userData: userData) => {
   try {
-    if (!userData.email || !userData.Id)
+    if (!userData || (!userData?.email && !userData?.Id))
       throw new Error("Provide email address or Id");
-    const findUser = await ngoModel.find(
-      userData.email
-        ? { Email: userData.email }
-        : { _id: new mongoose.Types.ObjectId(userData.Id) }
-    );
-    if (!findUser) throw new Error("error while fetching userData");
-    return findUser;
+    
+    const query = userData.email
+      ? { Email: userData.email }
+      : { _id: new mongoose.Types.ObjectId(userData.Id) };
+    
+    const userResult = await ngoModel.find(query);
+    // Return empty array if no user found (this is normal for signup checks)
+    return userResult || [];
   } catch (error) {
-    return error;
+    throw error;
   }
 };
 
 const saveDataAndToken = async (userData: userSingupData) => {
   try {
+    if (!userData) throw new Error("User data is required");
+    
     const Data = await ngoModel.create({
       Email: userData.email,
       NgoName: userData.ngoName,
@@ -33,7 +36,7 @@ const saveDataAndToken = async (userData: userSingupData) => {
       PublicKey: userData.publicKey,
       PrivateKey: userData.privateKey,
       PhoneNo: userData.phoneNo,
-      Password: userData.passwrod,
+      Password: userData.password,
     });
     if (!Data) throw new Error("something went wrong while saving data");
     const { accessToken, refreshToken } = await Data.generateTokens();
@@ -57,9 +60,9 @@ const saveDataAndToken = async (userData: userSingupData) => {
 //never write code this way!!
 const findUserWithTokenAndPassCheck=async(userData:userLoginData)=>{
     try {
-        if(!userData.email||userData.password) throw new Error("provide email or password");
+        if(!userData || !userData.email||!userData.password) throw new Error("provide email or password");
         const data=await ngoModel.findOne({Email:userData.email});
-        if(!data) throw new Error(`something went wrong while finding user ${data}`);
+        if(!data) throw new Error("User not found with this email");
         const isVaildPassword=await data.isPasswordCorrect(userData.password);
         if(!isVaildPassword) throw new Error("Invalid password");
         const {accessToken,refreshToken}=await data.generateTokens();
@@ -81,7 +84,7 @@ const findUserWithTokenAndPassCheck=async(userData:userLoginData)=>{
 }
 
 const getPrivateKey=async(Id:string):Promise<string>=>{
-        if(!Id) throw new Error("Please provide postId");
+        if(!Id) throw new Error("Please provide userId");
         const UserData= await ngoModel.findOne({_id:new mongoose.Types.ObjectId(Id)}).select("PrivateKey -_Id").lean<{ PrivateKey: string }>();
         if(!UserData) throw new Error("no privatekey found!!");
         return UserData.PrivateKey;

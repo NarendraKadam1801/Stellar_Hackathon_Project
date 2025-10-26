@@ -3,9 +3,9 @@ import { expenseModel } from "../model/expense.model.js";
 
 
 const getPrevTxn=async(PostId:string):Promise<string>=>{
-    const currentTxn= await expenseModel.findOne({_id:new mongoose.Types.ObjectId(PostId)}).sort({createAt:-1}).select("currentTxn -_id").lean<{ CurrentTxn: string }>();
-    if(!currentTxn) throw new Error("currentTxn is not avail");
-    return currentTxn.CurrentTxn;
+    const currentTxn= await expenseModel.findOne({_id:new mongoose.Types.ObjectId(PostId)}).sort({createdAt:-1}).select("currentTxn -_id").lean<{ currentTxn: string }>();
+    if(!currentTxn) throw new Error("No previous transaction found for this post");
+    return currentTxn.currentTxn;
 }  
 
 

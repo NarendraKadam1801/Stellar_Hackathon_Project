@@ -13,8 +13,7 @@ export interface PostData{
     ImgCid:string;
     NeedAmount:string;
     WalletAddr:string;
-    NgoRef:Types.ObjectId;
-
+    NgoRef?:Types.ObjectId; // Optional since it will be set by middleware
 }
 
 interface RequestK extends Request{
@@ -29,7 +28,15 @@ const getAllPost=AsyncHandler(async(req:Request,res:Response)=>{
 
 const createPost=AsyncHandler(async (req:RequestK,res:Response)=>{
     let data:PostData=req.body;
-    data.NgoRef=new Types.ObjectId(req.NgoId);
+    
+    // NgoRef should be set by the verifyToken middleware
+    if (!req.NgoId) {
+        throw new ApiError(401, "NGO authentication required");
+    }
+    
+    // Ensure NgoRef is set
+    data.NgoRef = new Types.ObjectId(req.NgoId);
+    
     if(!data) throw new ApiError(400,"invalid data");
     const saveData=await savePostData(data);
     if(!saveData) throw new ApiError(500,`somethign went wrong while saving post data ${saveData}`);

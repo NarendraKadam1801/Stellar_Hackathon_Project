@@ -21,14 +21,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>
   }
 
-  const isWalletConnected = walletState?.isConnected ?? false
-  const isNGOAuthenticated = ngoAuth?.isAuthenticated ?? false
-  const shouldShowAuth = !isWalletConnected && !isNGOAuthenticated
-
-  return (
-    <>
-      {children}
-      {shouldShowAuth && <AuthModal />}
-    </>
-  )
+  // Don't force auth modal - let users browse freely
+  // Auth modal will be shown when they try to donate or create tasks
+  return <>{children}</>
 }

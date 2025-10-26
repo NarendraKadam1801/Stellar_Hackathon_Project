@@ -2,15 +2,15 @@ import {PinataSDK} from "pinata";
 import fs from "fs";
 
 const pinata=new PinataSDK({
-    pinataJwt:process.env.PINATA_JWT,
-    pinataGateway:process.env.PINATA_GATEWAY
+    pinataJwt:process.env.PINATA_JWT || "",
+    pinataGateway:process.env.PINATA_GATEWAY || ""
 });
 
 
 const retriveFromIpfs=async(cid:string)=>{
     try {
         const data=await pinata.gateways.public.get(cid);
-        if(!data) throw new Error("Somethign went wrong while retriving data from ipfs");
+        if(!data) throw new Error("Something went wrong while retrieving data from IPFS");
         return {
             success:true,
             data,
@@ -29,7 +29,7 @@ const retriveFromIpfs=async(cid:string)=>{
 const uploadOnIpfs=async(data:Object)=>{
     try {
         const uploadData=await pinata.upload.public.json(data);
-        if(!uploadData) throw new Error("Somethign went wrong while uploading data from ipfs");
+        if(!uploadData) throw new Error("Something went wrong while uploading data to IPFS");
         return {
             success:true,
             cid:uploadData.cid,
@@ -49,7 +49,7 @@ const uploadOnIpfsBill=async(data:Express.Multer.File)=>{
         const file = new File([fileBuffer], data.originalname, { type: data.mimetype });
         const uploadData=await pinata.upload.public.file(file);
 
-        if(!uploadData) throw new Error("Somethign went wrong while uploading data from ipfs");
+        if(!uploadData) throw new Error("Something went wrong while uploading data to IPFS");
         return {
             success:true,
             cid:uploadData.cid,
@@ -65,7 +65,7 @@ const uploadOnIpfsBill=async(data:Express.Multer.File)=>{
 const deleteIpfsData=async(cid:string[])=>{
     try {
         const dataDelet=await pinata.files.public.delete(cid);
-        if(!dataDelet) throw new Error("Somethign went wrong while deleting data from ipfs");
+        if(!dataDelet) throw new Error("Something went wrong while deleting data from IPFS");
         return {
             success:true,
             cid,

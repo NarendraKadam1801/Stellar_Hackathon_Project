@@ -12,22 +12,24 @@ interface TokenPayload {
 // Generate Access Token
 const genAccessToken = async (user: TokenPayload) => {
   try {
-    const { email, walletAddr, NgoName } = user;
+    const { email, walletAddr, NgoName, id } = user;
     const secret: any = process.env.ATS;
     
     if (!secret || !user) {
       throw new ApiError(500, "Secret is missing or user info is invalid");
     }
     
-    return await jwt.sign(
+    return jwt.sign(
       {
         email,
         NgoName,
         walletAddr,
+        userId: id, // Add userId for middleware
+        id: id, // Also include id for consistency
       },
       secret, // Access token secret
       {
-        expiresIn: process.env.ATE // Access token expiry
+        expiresIn: process.env.ATE || "15m" // Access token expiry
       }
     );
   } catch (error) {
@@ -45,14 +47,14 @@ const genRefreshToken = async (user: TokenPayload) => {
       throw new ApiError(500, "Refresh token secret is missing");
     }
     
-    return await jwt.sign(
+    return jwt.sign(
       {
         id,
         walletAddr
       },
       secret,
       {
-        expiresIn: process.env.RTE // Refresh token expiry
+        expiresIn: process.env.RTE || "7d" // Refresh token expiry
       }
     );
   } catch (error) {

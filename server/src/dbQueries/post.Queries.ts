@@ -23,7 +23,7 @@ const savePostData=async (postData:PostData)=>{
             NeedAmount:postData.NeedAmount,
             WalletAddr:postData.WalletAddr,
         });
-        if(!saveData) throw new Error(`something went wrong while saving post data ${saveData}`)
+        if(!saveData) throw new Error("Failed to save post data")
         return saveData;
     } catch (error) {
         return error;

@@ -1,17 +1,74 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { TaskCard } from "@/components/task-card"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, CheckCircle2, Zap, Shield } from "lucide-react"
+import { apiService, type Post } from "@/lib/api-service"
 import { mockTasks } from "@/lib/mock-data"
+import { AuthModal } from "@/components/auth-modal"
+import { NGOAuthModal } from "@/components/ngo-auth-modal"
+import { useDispatch, useSelector } from "react-redux"
+import type { RootState, AppDispatch } from "@/lib/redux/store"
+import { openAuthModal } from "@/lib/redux/slices/ui-slice"
+import { useNGOAuth } from "@/lib/ngo-auth-context"
 
 export default function Home() {
-  const [userRole, setUserRole] = useState<"donor" | "ngo" | null>(null)
+  const dispatch = useDispatch<AppDispatch>()
+  const { isAuthenticated: ngoAuthenticated } = useNGOAuth()
+  const { isConnected: walletConnected } = useSelector((state: RootState) => state.wallet)
+  const [posts, setPosts] = useState<Post[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const featuredTasks = mockTasks.slice(0, 3)
+  useEffect(() => {
+    loadPosts()
+  }, [])
+
+  const loadPosts = async () => {
+    try {
+      setIsLoading(true)
+      const response = await apiService.getPosts()
+      if (response.success) {
+        setPosts(response.data)
+      }
+    } catch (err) {
+      console.error("Error loading posts:", err)
+      setError("Failed to load posts")
+      // Fallback to mock data
+      setPosts(mockTasks.map(task => ({
+        _id: task.id.toString(),
+        Title: task.title,
+        Type: task.category,
+        Description: task.description,
+        Location: task.location,
+        ImgCid: task.image,
+        NeedAmount: task.goal.toString(),
+        WalletAddr: "GBUQWP3BOUZX34ULNQG23RQ6F4BVXEYMJUCHUZI7VCZE7FDCVXWH6HUP",
+        NgoRef: task.ngo,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Convert API posts to task format for TaskCard component
+  const convertPostToTask = (post: Post) => ({
+    id: parseInt(post._id),
+    title: post.Title,
+    ngo: post.NgoRef,
+    description: post.Description,
+    goal: parseInt(post.NeedAmount),
+    raised: Math.floor(Math.random() * parseInt(post.NeedAmount) * 0.8), // Mock raised amount
+    image: post.ImgCid.startsWith('/') ? post.ImgCid : `/placeholder.jpg`,
+    category: post.Type,
+  })
+
+  const featuredTasks = posts.slice(0, 3).map(convertPostToTask)
 
   return (
     <div className="min-h-screen bg-background">
@@ -33,11 +90,21 @@ export default function Home() {
                   Browse Tasks <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/ngo/auth?mode=signup">
-                <Button size="lg" variant="outline">
-                  Create Task
+              {ngoAuthenticated ? (
+                <Link href="/ngo/create-post">
+                  <Button size="lg" variant="outline">
+                    Create Task
+                  </Button>
+                </Link>
+              ) : (
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  onClick={() => dispatch(openAuthModal())}
+                >
+                  Get Started
                 </Button>
-              </Link>
+              )}
             </div>
           </div>
 
@@ -63,6 +130,17 @@ export default function Home() {
       <section className="py-16 px-4">
         <div className="mx-auto max-w-6xl">
           <h2 className="text-3xl font-bold text-foreground mb-12">Featured Tasks</h2>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-gray-200 animate-pulse rounded-lg h-80"></div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500 mb-8">
+              {error} - Showing sample data
+            </div>
+          ) : null}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {featuredTasks.map((task) => (
               <TaskCard key={task.id} task={task} />
@@ -104,6 +182,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Auth Modal */}
+      <AuthModal />
+      <NGOAuthModal />
     </div>
   )
 }
