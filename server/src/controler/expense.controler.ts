@@ -19,8 +19,7 @@ const getPreviousTransaction = AsyncHandler(async (req: Request, res: Response) 
   if (!postId) throw new ApiError(400, "Post ID is required");
   
   const prevTxn = await getPrevTxn(postId);
-  if (!prevTxn) throw new ApiError(404, "Previous transaction not found");
-  
+  // Always return success, even if no previous transaction exists (for new posts)
   return res.status(200).json(new ApiResponse(200, { prevTxn }, "Previous transaction retrieved"));
 });
 

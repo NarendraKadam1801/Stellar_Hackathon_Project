@@ -4,7 +4,7 @@ const getPosts = async () => {
         return await postModel.find();
     }
     catch (error) {
-        return error;
+        throw error;
     }
 };
 const savePostData = async (postData) => {
@@ -22,7 +22,7 @@ const savePostData = async (postData) => {
             WalletAddr: postData.WalletAddr,
         });
         if (!saveData)
-            throw new Error(`something went wrong while saving post data ${saveData}`);
+            throw new Error("Failed to save post data");
         return saveData;
     }
     catch (error) {

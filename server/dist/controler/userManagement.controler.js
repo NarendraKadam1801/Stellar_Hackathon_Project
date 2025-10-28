@@ -7,8 +7,14 @@ const findUserById = AsyncHandler(async (req, res) => {
     const { email, id } = req.query;
     if (!email && !id)
         throw new ApiError(400, "Email or ID is required");
-    const user = await findUser({ email: email || undefined, Id: id || undefined });
-    if (!user)
+    // Build query object with only defined values
+    const query = {};
+    if (email)
+        query.email = email;
+    if (id)
+        query.Id = id;
+    const user = await findUser(query);
+    if (!user || user.length === 0)
         throw new ApiError(404, "User not found");
     return res.status(200).json(new ApiResponse(200, user, "User found"));
 });

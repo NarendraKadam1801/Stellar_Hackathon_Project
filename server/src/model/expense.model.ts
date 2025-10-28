@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const expenseSchame = new mongoose.Schema(
+const expenseSchema = new mongoose.Schema(
   {
     currentTxn: {
       type: String,
@@ -14,4 +14,4 @@ const expenseSchame = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const expenseModel = mongoose.model("expensemodel", expenseSchame);
+export const expenseModel = mongoose.model("expensemodel", expenseSchema);

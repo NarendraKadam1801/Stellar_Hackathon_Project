@@ -1,4 +1,19 @@
-import mongoose from "mongoose";
+import mongoose, { Document } from "mongoose";
+
+export interface IPost extends Document {
+  _id: mongoose.Types.ObjectId;
+  Title: string;
+  Type: string;
+  Description: string;
+  Location: string;
+  ImgCid: string;
+  NgoRef: mongoose.Types.ObjectId;
+  NeedAmount: number;
+  CollectedAmount?: number;
+  WalletAddr: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const postSchame = new mongoose.Schema(
   {
@@ -41,4 +56,4 @@ const postSchame = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const postModel = mongoose.model("postmodel", postSchame);
+export const postModel = mongoose.model<IPost>("postmodel", postSchame);

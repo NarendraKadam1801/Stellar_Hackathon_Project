@@ -7,6 +7,7 @@ import stellarRoutes from "./stellar.routes.js";
 import donationRoutes from "./donation.routes.js";
 import expenseRoutes from "./expense.routes.js";
 import userManagementRoutes from "./userManagement.routes.js";
+import statsRoutes from "./stats.routes.js";
 const router = Router();
 // Mount all route modules
 router.use("/ipfs", ipfsRoutes);
@@ -17,6 +18,7 @@ router.use("/stellar", stellarRoutes);
 router.use("/donations", donationRoutes);
 router.use("/expenses", expenseRoutes);
 router.use("/user-management", userManagementRoutes);
+router.use("/stats", statsRoutes);
 // Health check endpoint
 router.get("/health", (req, res) => {
     res.status(200).json({

@@ -1,77 +1,21 @@
-import mongoose from "mongoose";
-export declare const postModel: mongoose.Model<{
-    Description?: string | null | undefined;
-    Title?: string | null | undefined;
-    Type?: string | null | undefined;
-    Location?: string | null | undefined;
-    ImgCid?: string | null | undefined;
-    NgoRef?: mongoose.Types.ObjectId | null | undefined;
-    NeedAmount?: number | null | undefined;
-    CollectedAmount?: number | null | undefined;
-    WalletAddr?: string | null | undefined;
-} & mongoose.DefaultTimestampProps, {}, {}, {}, mongoose.Document<unknown, {}, {
-    Description?: string | null | undefined;
-    Title?: string | null | undefined;
-    Type?: string | null | undefined;
-    Location?: string | null | undefined;
-    ImgCid?: string | null | undefined;
-    NgoRef?: mongoose.Types.ObjectId | null | undefined;
-    NeedAmount?: number | null | undefined;
-    CollectedAmount?: number | null | undefined;
-    WalletAddr?: string | null | undefined;
-} & mongoose.DefaultTimestampProps, {}, {
-    timestamps: true;
+import mongoose, { Document } from "mongoose";
+export interface IPost extends Document {
+    _id: mongoose.Types.ObjectId;
+    Title: string;
+    Type: string;
+    Description: string;
+    Location: string;
+    ImgCid: string;
+    NgoRef: mongoose.Types.ObjectId;
+    NeedAmount: number;
+    CollectedAmount?: number;
+    WalletAddr: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+export declare const postModel: mongoose.Model<IPost, {}, {}, {}, mongoose.Document<unknown, {}, IPost, {}, {}> & IPost & Required<{
+    _id: mongoose.Types.ObjectId;
 }> & {
-    Description?: string | null | undefined;
-    Title?: string | null | undefined;
-    Type?: string | null | undefined;
-    Location?: string | null | undefined;
-    ImgCid?: string | null | undefined;
-    NgoRef?: mongoose.Types.ObjectId | null | undefined;
-    NeedAmount?: number | null | undefined;
-    CollectedAmount?: number | null | undefined;
-    WalletAddr?: string | null | undefined;
-} & mongoose.DefaultTimestampProps & {
-    _id: mongoose.Types.ObjectId;
-} & {
     __v: number;
-}, mongoose.Schema<any, mongoose.Model<any, any, any, any, any, any>, {}, {}, {}, {}, {
-    timestamps: true;
-}, {
-    Description?: string | null | undefined;
-    Title?: string | null | undefined;
-    Type?: string | null | undefined;
-    Location?: string | null | undefined;
-    ImgCid?: string | null | undefined;
-    NgoRef?: mongoose.Types.ObjectId | null | undefined;
-    NeedAmount?: number | null | undefined;
-    CollectedAmount?: number | null | undefined;
-    WalletAddr?: string | null | undefined;
-} & mongoose.DefaultTimestampProps, mongoose.Document<unknown, {}, mongoose.FlatRecord<{
-    Description?: string | null | undefined;
-    Title?: string | null | undefined;
-    Type?: string | null | undefined;
-    Location?: string | null | undefined;
-    ImgCid?: string | null | undefined;
-    NgoRef?: mongoose.Types.ObjectId | null | undefined;
-    NeedAmount?: number | null | undefined;
-    CollectedAmount?: number | null | undefined;
-    WalletAddr?: string | null | undefined;
-} & mongoose.DefaultTimestampProps>, {}, mongoose.ResolveSchemaOptions<{
-    timestamps: true;
-}>> & mongoose.FlatRecord<{
-    Description?: string | null | undefined;
-    Title?: string | null | undefined;
-    Type?: string | null | undefined;
-    Location?: string | null | undefined;
-    ImgCid?: string | null | undefined;
-    NgoRef?: mongoose.Types.ObjectId | null | undefined;
-    NeedAmount?: number | null | undefined;
-    CollectedAmount?: number | null | undefined;
-    WalletAddr?: string | null | undefined;
-} & mongoose.DefaultTimestampProps> & {
-    _id: mongoose.Types.ObjectId;
-} & {
-    __v: number;
-}>>;
+}, any>;
 //# sourceMappingURL=post.model.d.ts.map

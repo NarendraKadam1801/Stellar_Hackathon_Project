@@ -2,21 +2,28 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { useNGOAuth } from "@/lib/ngo-auth-context"
-import { Loader2, CheckCircle2, ArrowLeft, Upload } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useDispatch, useSelector } from "react-redux"
+import type { RootState, AppDispatch } from "@/lib/redux/store"
+import { createStellarAccount } from "@/lib/stellar-utils"
+import { apiService } from "@/lib/api-service"
+import { Loader2, CheckCircle2, ArrowLeft, Upload, AlertCircle } from "lucide-react"
 
 export default function CreatePostPage() {
   const router = useRouter()
-  const { isAuthenticated, ngoProfile } = useNGOAuth()
+  const dispatch = useDispatch<AppDispatch>()
+  const { isAuthenticated, ngoProfile } = useSelector((state: RootState) => state.ngoAuth)
 
   const [step, setStep] = useState<"form" | "preview" | "success">("form")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -25,8 +32,24 @@ export default function CreatePostPage() {
     image: null as File | null,
     impact: "",
     timeline: "",
-    walletAddr: ngoProfile?.WalletAddr || "", // Add this line
   })
+
+  // Create Stellar wallet for NGO if not exists
+  useEffect(() => {
+    const createWallet = async () => {
+      if (isAuthenticated && ngoProfile && !walletAddress) {
+        try {
+          const account = await createStellarAccount()
+          setWalletAddress(account.publicKey)
+        } catch (err) {
+          console.error("Failed to create wallet:", err)
+          setError("Failed to create wallet. Please try again.")
+        }
+      }
+    }
+
+    createWallet()
+  }, [isAuthenticated, ngoProfile, walletAddress])
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
@@ -52,25 +75,48 @@ export default function CreatePostPage() {
   }
 
   const handlePublish = async () => {
+    if (!walletAddress) {
+      setError("Wallet not ready. Please wait...")
+      return
+    }
+
     setIsProcessing(true)
+    setError(null)
+
     try {
-      // Your API call to create post should include the wallet address
+      // Upload image to IPFS if provided
+      let imageCid = ""
+      if (formData.image) {
+        const uploadResponse = await apiService.uploadToIPFS(formData.image)
+        if (uploadResponse.success) {
+          imageCid = uploadResponse.data.cid
+        }
+      }
+
+      // Create post data
       const postData = {
         Title: formData.title,
-        Description: formData.description,
-        NeedAmount: formData.goal,
         Type: formData.category,
-        WalletAddr: formData.walletAddr, // Make sure this is included
-        ImgCid: "", // Add your IPFS image CID here if using one
-        Location: "", // Add location if needed
+        Description: formData.description,
+        Location: "India", // Default location
+        ImgCid: imageCid || "/placeholder.jpg",
+        NeedAmount: formData.goal,
+        WalletAddr: walletAddress,
+        NgoRef: ngoProfile?.id || "",
       }
+
+      // Submit to API
+      const response = await apiService.createPost(postData)
       
-      // Your API call here
-      // await postsApi.create(postData)
-      
-      setStep("success")
-    } catch (error) {
-      console.error("Failed to create post:", error)
+      if (response.success) {
+        setStep("success")
+      } else {
+        throw new Error(response.message || "Failed to create post")
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create post"
+      setError(message)
+      console.error("Create post error:", err)
     } finally {
       setIsProcessing(false)
     }
@@ -86,7 +132,6 @@ export default function CreatePostPage() {
       image: null,
       impact: "",
       timeline: "",
-      walletAddr: ngoProfile?.WalletAddr || "", // Add this line
     })
   }
 
@@ -114,6 +159,22 @@ export default function CreatePostPage() {
 
           {step === "form" && (
             <Card className="p-8">
+              {error && (
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {!walletAddress && isAuthenticated && (
+                <Alert className="mb-6">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <AlertDescription>
+                    Setting up your Stellar wallet... This may take a moment.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Title */}
                 <div>
@@ -211,7 +272,11 @@ export default function CreatePostPage() {
                 </div>
 
                 {/* Submit Button */}
-                <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
+                <Button 
+                  type="submit" 
+                  className="w-full bg-primary hover:bg-primary/90"
+                  disabled={!walletAddress}
+                >
                   Preview Post
                 </Button>
               </form>
@@ -221,6 +286,13 @@ export default function CreatePostPage() {
           {step === "preview" && (
             <Card className="p-8">
               <h2 className="text-2xl font-bold text-foreground mb-6">Preview Your Post</h2>
+
+              {error && (
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
               <div className="space-y-6 mb-8">
                 <div>
@@ -254,14 +326,6 @@ export default function CreatePostPage() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Expected Impact</p>
                   <p className="text-foreground whitespace-pre-wrap">{formData.impact}</p>
-                </div>
-
-                {/* Add this new section */}
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Donation Wallet</p>
-                  <p className="font-mono text-sm bg-slate-50 p-3 rounded break-all">
-                    {formData.walletAddr}
-                  </p>
                 </div>
               </div>
 
@@ -303,9 +367,7 @@ export default function CreatePostPage() {
                 <div className="space-y-2">
                   <p className="font-semibold text-foreground">{formData.title}</p>
                   <p className="text-sm text-muted-foreground">Goal: ₹{Number(formData.goal).toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">NGO: {ngoProfile?.NgoName}</p>
-                  {/* Add this line */}
-                  <p className="text-sm font-mono break-all">Wallet: {formData.walletAddr}</p>
+                  <p className="text-sm text-muted-foreground">NGO: {ngoProfile?.name}</p>
                 </div>
               </div>
 

@@ -1,34 +1,36 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
+import { createSlice } from "@reduxjs/toolkit"
 
 interface UIState {
   showAuthModal: boolean
-  authMode: "login" | "signup"
+  authMode: "login" | "signup" | null
 }
 
 const initialState: UIState = {
-  showAuthModal: false, // Changed to false - modal won't auto-show
-  authMode: "login",
+  showAuthModal: false,
+  authMode: null,
 }
 
 const uiSlice = createSlice({
   name: "ui",
   initialState,
   reducers: {
-  openAuthModal: (state, action: PayloadAction<"login" | "signup" | undefined>) => {
-  state.showAuthModal = true
-  if (action.payload) {
-    state.authMode = action.payload
-  }
-},
-
+    openAuthModal: (state, action) => {
+      state.showAuthModal = true
+      if (action.payload) {
+        state.authMode = action.payload
+      } else {
+        state.authMode = null
+      }
+    },
     closeAuthModal: (state) => {
       state.showAuthModal = false
+      state.authMode = null
     },
-    setAuthMode: (state, action: PayloadAction<"login" | "signup">) => {
+    setAuthMode: (state, action) => {
       state.authMode = action.payload
     },
   },
 })
 
 export const { openAuthModal, closeAuthModal, setAuthMode } = uiSlice.actions
-export default uiSlice.reducer // Fixed typo: was "reduce", now "reducer"
+export default uiSlice.reducer

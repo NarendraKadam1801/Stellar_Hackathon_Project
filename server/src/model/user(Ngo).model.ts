@@ -1,9 +1,11 @@
-import mongoose from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+dotenv.config();
 import bcrypt from "bcrypt";
 
-
-interface INgo {
+export interface INgo {
+  _id?: mongoose.Types.ObjectId;
   NgoName: string;
   RegNumber: string;
   Description: string;
@@ -15,7 +17,7 @@ interface INgo {
   RefreshToken?: string;
 }
 
-interface INgoMethods {
+export interface INgoMethods {
   isPasswordCorrect(password: string): Promise<boolean>;
   generateAccessToken(): string;
   generateRefreshToken(): string;
@@ -95,7 +97,7 @@ NgoSchema.methods.isPasswordCorrect = async function (
 };
 
 NgoSchema.methods.generateAccessToken = function (): string {
-  const secret = process.env.ATS;
+  const secret = process.env.ATS || "sfdsdf";
   
   if (!secret) {
     throw new Error("Access token secret (ATS) is missing");
@@ -117,7 +119,7 @@ NgoSchema.methods.generateAccessToken = function (): string {
 };
 
 NgoSchema.methods.generateRefreshToken = function (): string {
-  const secret = process.env.RTS;
+  const secret = process.env.RTS || "sdfsd";
   
   if (!secret) {
     throw new Error("Refresh token secret (RTS) is missing");

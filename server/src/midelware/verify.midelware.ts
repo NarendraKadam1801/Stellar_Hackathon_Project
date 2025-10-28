@@ -1,10 +1,17 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { ApiError } from "../util/apiError.util.js";
+import dotenv from "dotenv";
+dotenv.config();
 
-interface RequestK extends Request {
+export interface RequestK extends Request {
     NgoId?: string;
-    user?: any;
+    user?: {
+        id: string;
+        email: string;
+        walletAddr: string;
+        NgoName: string;
+    };
 }
 
 const verifyToken = async (req: RequestK, res: Response, next: NextFunction) => {
@@ -24,7 +31,7 @@ const verifyToken = async (req: RequestK, res: Response, next: NextFunction) => 
         }
 
         // Verify the token
-        const decoded = jwt.verify(token, process.env.ATS || "your-secret-key") as any;
+        const decoded = jwt.verify(token, process.env.ATS || "sfdsdf") as any;
         
         console.log('Token decoded successfully:', {
             userId: decoded.userId,
@@ -37,9 +44,14 @@ const verifyToken = async (req: RequestK, res: Response, next: NextFunction) => 
             throw new ApiError(401, "Invalid token");
         }
 
-        // Set NGO ID for use in controllers
+        // Set user data for use in controllers
         req.NgoId = decoded.userId;
-        req.user = decoded;
+        req.user = {
+            id: decoded.userId,
+            email: decoded.email,
+            walletAddr: decoded.walletAddr,
+            NgoName: decoded.NgoName
+        };
         
         next();
     } catch (error) {

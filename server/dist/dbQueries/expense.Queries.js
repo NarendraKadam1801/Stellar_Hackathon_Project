@@ -1,10 +1,18 @@
 import mongoose from "mongoose";
 import { expenseModel } from "../model/expense.model.js";
 const getPrevTxn = async (PostId) => {
-    const currentTxn = await expenseModel.findOne({ _id: new mongoose.Types.ObjectId(PostId) }).sort({ createAt: -1 }).select("currentTxn -_id").lean();
-    if (!currentTxn)
-        throw new Error("currentTxn is not avail");
-    return currentTxn.CurrentTxn;
+    try {
+        const currentTxn = await expenseModel.findOne({ postIDs: new mongoose.Types.ObjectId(PostId) }).sort({ createdAt: -1 }).select("currentTxn -_id").lean();
+        if (!currentTxn) {
+            // Return empty string instead of throwing error for new posts
+            return "";
+        }
+        return currentTxn.currentTxn;
+    }
+    catch (error) {
+        console.error("Error getting previous transaction:", error);
+        return "";
+    }
 };
 const createTransaction = async (txnData, postId) => {
     try {

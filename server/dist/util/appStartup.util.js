@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 export const connectDB = async () => {
     try {
-        const mongoURI = process.env.MONGODB_URI || "mongodb://localhost:27017/aidbridge";
+        const mongoURI = process.env.MONGODB_URI || "mongodb+srv://devteam:ankitmahar@cluster0.os2bqhl.mongodb.net/?appName=Cluster0";
         await mongoose.connect(mongoURI);
         console.log("✅ MongoDB connected successfully");
     }

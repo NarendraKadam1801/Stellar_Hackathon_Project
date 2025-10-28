@@ -1,7 +1,7 @@
 import AsyncHandler from "../util/asyncHandler.util.js";
 import { ApiError } from "../util/apiError.util.js";
 import { sendPaymentToWallet, verfiyTransaction, } from "../services/stellar/transcation.stellar.js";
-import { createDonation } from "../dbQueries/donation.Queries.js";
+import { createDonation, getDonation } from "../dbQueries/donation.Queries.js";
 import { ApiResponse } from "../util/apiResponse.util.js";
 import { getPrivateKey } from "../dbQueries/user.Queries.js";
 import { createTransaction, getPrevTxn } from "../dbQueries/expense.Queries.js";
@@ -10,10 +10,19 @@ const verfiyDonationAndSave = AsyncHandler(async (req, res) => {
     const donationData = req.body;
     if (!donationData)
         throw new ApiError(400, "Invalid data");
+    // Check if donation already exists (prevent duplicates)
+    const existingDonation = await getDonation(donationData.TransactionId);
+    if (existingDonation) {
+        return res
+            .status(200)
+            .json(new ApiResponse(200, existingDonation, "Donation already recorded"));
+    }
+    // Verify transaction on Stellar network
     const verfiyDonation = await verfiyTransaction(donationData.TransactionId);
     if (!verfiyDonation)
         throw new ApiError(401, "Invalid Transaction");
-    const saveData = createDonation(donationData);
+    // Save donation to database
+    const saveData = await createDonation(donationData);
     if (!saveData)
         throw new ApiError(500, `something went wrong while saving data ${saveData}`);
     return res

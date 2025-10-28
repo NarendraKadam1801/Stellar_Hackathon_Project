@@ -1,17 +1,19 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useCallback, useEffect } from "react"
-import { authApi } from "./api-client"
+import { createContext, useContext, useEffect } from "react"
+import { useDispatch, useSelector } from "react-redux"
+import type { RootState, AppDispatch } from "@/lib/redux/store"
+import { loginNGO, signupNGO, logoutNGO, checkNGOCookie } from "@/lib/redux/slices/ngo-auth-slice"
 
 interface NGOProfile {
-  Id: string
-  NgoName: string
-  Email: string
-  RegNumber: string
-  Description: string
-  createdAt: string
-  WalletAddr: string // Make sure this is included
+  id: string
+  name: string
+  email: string
+  registrationNumber: string
+  description: string
+  logo?: string
+  createdAt: Date
 }
 
 interface NGOAuthContextType {
@@ -20,106 +22,43 @@ interface NGOAuthContextType {
   isLoading: boolean
   error: string | null
   login: (email: string, password: string) => Promise<void>
-  signup: (ngoData: {
-    ngoName: string
-    regNumber: string
-    description: string
-    email: string
-    phoneNo: string
-    password: string
-  }) => Promise<void>
+  signup: (ngoData: Omit<NGOProfile, "id" | "createdAt"> & { password: string; phoneNo: string }) => Promise<void>
   logout: () => void
-  checkAuth: () => Promise<void>
+  checkAuth: () => void
 }
 
 const NGOAuthContext = createContext<NGOAuthContextType | undefined>(undefined)
 
 export function NGOAuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [ngoProfile, setNGOProfile] = useState<NGOProfile | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const dispatch = useDispatch<AppDispatch>()
+  const { isAuthenticated, ngoProfile, isLoading, error } = useSelector((state: RootState) => state.ngoAuth)
 
   useEffect(() => {
-    checkAuth()
-  }, [])
+    // Check for existing NGO session on mount
+    dispatch(checkNGOCookie())
+  }, [dispatch])
 
-  const checkAuth = useCallback(async () => {
-    try {
-      // Check if user profile exists in localStorage (set after login/signup)
-      const storedProfile = localStorage.getItem("ngo_profile")
-      if (storedProfile) {
-        const profile = JSON.parse(storedProfile)
-        setNGOProfile(profile)
-        setIsAuthenticated(true)
-      } else {
-        setIsAuthenticated(false)
-      }
-    } catch (err) {
-      console.error("[v0] Auth check error:", err)
-      setIsAuthenticated(false)
+  const login = async (email: string, password: string) => {
+    const result = await dispatch(loginNGO({ email, password }))
+    if (loginNGO.rejected.match(result)) {
+      throw new Error(result.payload as string)
     }
-  }, [])
+  }
 
-  const login = useCallback(async (email: string, password: string) => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const response = await authApi.login(email, password)
-
-      // Store profile in localStorage for persistence
-      localStorage.setItem("ngo_profile", JSON.stringify(response.userData))
-
-      setNGOProfile(response.userData)
-      setIsAuthenticated(true)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed"
-      setError(message)
-      throw err
-    } finally {
-      setIsLoading(false)
+  const signup = async (ngoData: Omit<NGOProfile, "id" | "createdAt"> & { password: string; phoneNo: string }) => {
+    const result = await dispatch(signupNGO(ngoData))
+    if (signupNGO.rejected.match(result)) {
+      throw new Error(result.payload as string)
     }
-  }, [])
+  }
 
-  const signup = useCallback(
-    async (ngoData: {
-      ngoName: string
-      regNumber: string
-      description: string
-      email: string
-      phoneNo: string
-      password: string
-    }) => {
-      setIsLoading(true)
-      setError(null)
+  const logout = () => {
+    dispatch(logoutNGO())
+  }
 
-      try {
-        const response = await authApi.signup(ngoData)
-
-        // Store profile in localStorage for persistence
-        localStorage.setItem("ngo_profile", JSON.stringify(response.userData))
-
-        setNGOProfile(response.userData)
-        setIsAuthenticated(true)
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Signup failed"
-        setError(message)
-        throw err
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [],
-  )
-
-  const logout = useCallback(() => {
-    authApi.logout()
-    localStorage.removeItem("ngo_profile")
-    setIsAuthenticated(false)
-    setNGOProfile(null)
-    setError(null)
-  }, [])
+  const checkAuth = () => {
+    dispatch(checkNGOCookie())
+  }
 
   return (
     <NGOAuthContext.Provider

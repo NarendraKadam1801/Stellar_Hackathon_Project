@@ -1,26 +1,44 @@
 "use client"
 
 import { useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
-import type { RootState, AppDispatch } from "@/lib/redux/store"
-import { connectWallet } from "@/lib/redux/slices/wallet-slice"
-import { X } from "lucide-react"
+import { useWallet, useFreighterAvailable } from "@/hooks/use-wallet"
+import { X, Loader2 } from "lucide-react"
 import type { WalletType } from "@/lib/wallet-types"
 
 interface WalletSelectorProps {
   isOpen: boolean
   onClose: () => void
+  onSelect?: (walletType: WalletType) => void
 }
 
-export function WalletSelector({ isOpen, onClose }: WalletSelectorProps) {
-  const dispatch = useDispatch<AppDispatch>()
-  const { isConnecting, error } = useSelector((state: RootState) => state.wallet)
+export function WalletSelector({ isOpen, onClose, onSelect }: WalletSelectorProps) {
+  const { isConnecting, error, connect } = useWallet()
+  const isFreighterAvailable = useFreighterAvailable()
   const [selectedError, setSelectedError] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<string>("")
 
   const handleConnect = async (walletType: WalletType) => {
     setSelectedError(null)
+    setDebugInfo("")
+    
+    // Debug info for Freighter
+    if (walletType === "freighter") {
+      const debug = {
+        windowStellar: !!(window as any).stellar,
+        windowFreighter: !!(window as any).freighter,
+        windowFreighterApi: !!(window as any).freighterApi,
+        windowStellarFreighter: !!(window as any).StellarFreighter,
+        userAgent: navigator.userAgent,
+        location: window.location.hostname
+      }
+      setDebugInfo(`Debug: stellar=${debug.windowStellar}, freighter=${debug.windowFreighter}, freighterApi=${debug.windowFreighterApi}, StellarFreighter=${debug.windowStellarFreighter}`)
+    }
+    
     try {
-      await dispatch(connectWallet(walletType)).unwrap()
+      await connect(walletType)
+      if (onSelect) {
+        onSelect(walletType)
+      }
       onClose()
     } catch (err) {
       setSelectedError(err instanceof Error ? err.message : "Connection failed")
@@ -81,10 +99,17 @@ export function WalletSelector({ isOpen, onClose }: WalletSelectorProps) {
               className="w-full p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{wallet.icon}</span>
+                {isConnecting ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  <span className="text-2xl">{wallet.icon}</span>
+                )}
                 <div>
                   <div className="font-semibold text-gray-900">{wallet.name}</div>
                   <div className="text-sm text-gray-600">{wallet.description}</div>
+                  {wallet.id === "freighter" && !isFreighterAvailable && (
+                    <div className="text-xs text-orange-600 mt-1">Not installed</div>
+                  )}
                 </div>
               </div>
             </button>
@@ -95,6 +120,14 @@ export function WalletSelector({ isOpen, onClose }: WalletSelectorProps) {
           <div className="px-6 pb-6">
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
               {error || selectedError}
+            </div>
+          </div>
+        )}
+
+        {debugInfo && (
+          <div className="px-6 pb-6">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+              {debugInfo}
             </div>
           </div>
         )}

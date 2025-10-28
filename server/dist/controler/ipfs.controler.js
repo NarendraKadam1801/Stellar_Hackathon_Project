@@ -4,12 +4,21 @@ import { ApiError } from "../util/apiError.util.js";
 import { ApiResponse } from "../util/apiResponse.util.js";
 const UploadFileOnIpfs = AsyncHandler(async (req, res) => {
     const file = req.file;
+    console.log("📤 File upload request received:", file?.originalname);
     if (!file)
         throw new ApiError(400, "Please provide img");
     const uploadOnIpfsFile = await uploadOnIpfsBill(file);
-    if (!uploadOnIpfsFile)
-        throw new ApiError(500, `something went wrong while uploading file on ipfs`);
-    return res.status(200).json(new ApiResponse(200, uploadOnIpfsFile, "file uploaded"));
+    console.log("📦 IPFS upload result:", uploadOnIpfsFile);
+    if (!uploadOnIpfsFile || !uploadOnIpfsFile.success) {
+        const errorMessage = uploadOnIpfsFile?.error || "something went wrong while uploading file on ipfs";
+        console.error("❌ IPFS upload failed:", errorMessage);
+        throw new ApiError(500, errorMessage);
+    }
+    console.log("✅ File uploaded to IPFS successfully:", uploadOnIpfsFile.cid);
+    return res.status(200).json(new ApiResponse(200, {
+        cid: uploadOnIpfsFile.cid,
+        success: true
+    }, "file uploaded"));
 });
 // const UploadDataOnIpfs=AsyncHandler(async(req:Request,res:Response)=>{
 //     const data:BillData=req.body;

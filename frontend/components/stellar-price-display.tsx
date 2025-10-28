@@ -4,38 +4,70 @@ import { useEffect, useState } from "react"
 import { TrendingUp } from "lucide-react"
 
 interface StellarPriceProps {
-  amount: number
-  showLabel?: boolean
+  showPrice?: boolean;
+  onPriceLoad?: (price: number) => void;
 }
 
-export function StellarPriceDisplay({ amount, showLabel = true }: StellarPriceProps) {
-  const [stellarPrice, setStellarPrice] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
+export function StellarPriceDisplay({ showPrice = false, onPriceLoad }: StellarPriceProps) {
+  const [isMounted, setIsMounted] = useState(false)
+  const [price, setPrice] = useState<number | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
+    setIsMounted(true)
+    
     const fetchPrice = async () => {
       try {
+        setIsLoading(true)
         const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=inr")
         const data = await response.json()
-        setStellarPrice(data.stellar.inr)
-        setLoading(false)
+        if (data?.stellar?.inr) {
+          setPrice(data.stellar.inr)
+          onPriceLoad?.(data.stellar.inr)
+        }
       } catch (error) {
-        console.error("Failed to fetch Stellar price:", error)
-        setStellarPrice(15) // Fallback price
-        setLoading(false)
+        console.error("Error fetching Stellar price:", error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
-    fetchPrice()
-    const interval = setInterval(fetchPrice, 30000) // Update every 30 seconds
+    if (isMounted && showPrice) {
+      fetchPrice()
+      const interval = setInterval(fetchPrice, 5 * 60 * 1000) // Update every 5 minutes
+      return () => clearInterval(interval)
+    }
+  }, [isMounted, showPrice, onPriceLoad])
 
-    return () => clearInterval(interval)
-  }, [])
-
-  if (loading || !stellarPrice) {
-    return <span className="text-xs text-muted-foreground">Loading XLM price...</span>
+  // Don't render anything if not showing price
+  if (!showPrice) {
+    return null
   }
 
+  // Don't render anything on server-side
+  if (!isMounted) {
+    return <div className="h-5 w-24" />
+  }
+
+  // If still loading or no price available
+  if (loading || !stellarPrice) {
+    return <div className="h-5 w-24 bg-muted/20 rounded animate-pulse" />
+  }
+
+  // If no amount provided, just show the current XLM price
+  if (!amount || amount === 0) {
+    return (
+      <div className="flex items-center gap-2">
+        <TrendingUp className="h-4 w-4 text-green-500" />
+        <div className="text-sm">
+          <span className="font-semibold text-foreground">1 XLM</span>
+          <span className="text-xs text-muted-foreground ml-1">= ₹{stellarPrice.toFixed(2)}</span>
+        </div>
+      </div>
+    )
+  }
+
+  // If amount provided, calculate and show XLM equivalent
   const stellarAmount = amount / stellarPrice
 
   return (

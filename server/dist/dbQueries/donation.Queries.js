@@ -4,7 +4,8 @@ const getDonation = async (transactionId) => {
         return await donationModel.findOne({ currentTxn: transactionId });
     }
     catch (error) {
-        return error;
+        console.error("Error getting donation:", error);
+        throw error;
     }
 };
 const getAllDonation = async () => {
@@ -12,7 +13,8 @@ const getAllDonation = async () => {
         return await donationModel.find();
     }
     catch (error) {
-        return error;
+        console.error("Error getting all donations:", error);
+        throw error;
     }
 };
 const getDonationRelatedToPost = async (postId) => {
@@ -20,7 +22,8 @@ const getDonationRelatedToPost = async (postId) => {
         return await donationModel.find({ postIDs: postId });
     }
     catch (error) {
-        return error;
+        console.error("Error getting donations for post:", error);
+        throw error;
     }
 };
 const createDonation = async (donationData) => {
@@ -34,7 +37,8 @@ const createDonation = async (donationData) => {
         });
     }
     catch (error) {
-        return error;
+        console.error("Error creating donation:", error);
+        throw error;
     }
 };
 export { getDonation, getAllDonation, getDonationRelatedToPost, createDonation };

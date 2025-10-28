@@ -11,8 +11,12 @@ dotenv.config();
 const app = express();
 
 // Middleware
+if (!process.env.FRONTEND_URL) {
+  throw new Error('FRONTEND_URL is not defined in environment variables');
+}
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: process.env.FRONTEND_URL,
   credentials: true
 }));
 
@@ -74,6 +78,15 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
       success: false,
       message: "Invalid JSON format in request body",
       error: process.env.NODE_ENV === "development" ? err.message : "Bad Request"
+    });
+  }
+  
+  // Handle ApiError instances
+  if (err.statusCode && err.message) {
+    return res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      error: process.env.NODE_ENV === "development" ? err.stack : undefined
     });
   }
   

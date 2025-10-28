@@ -1,35 +1,49 @@
 "use client"
 
-import { useState } from "react"
+import * as React from "react"
 import Link from "next/link"
-import { useDispatch, useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
 import type { RootState, AppDispatch } from "@/lib/redux/store"
+import { WalletData } from "./wallet-data"
+import { StellarPriceDisplay } from "./stellar-price-display"
+import { logoutNGO } from "@/lib/redux/slices/ngo-auth-slice"
 import { disconnectWallet } from "@/lib/redux/slices/wallet-slice"
+import { clearAllBrowserData } from "@/lib/logout-utils"
 import { Button } from "@/components/ui/button"
-import { Wallet } from "lucide-react"
-import { WalletSelector } from "./wallet-selector"
-import { useNGOAuth } from "@/lib/ngo-auth-context"
+import { LogOut } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export function Header() {
+  const [isMounted, setIsMounted] = React.useState(false);
   const dispatch = useDispatch<AppDispatch>()
-  const { isConnected, publicKey, balance, isConnecting, error, walletType } = useSelector(
-    (state: RootState) => state.wallet,
-  )
-  const { isAuthenticated, ngoProfile } = useNGOAuth()
-  const [walletSelectorOpen, setWalletSelectorOpen] = useState(false)
+  const router = useRouter()
+  const { error, isConnected: walletConnected } = useSelector((state: RootState) => state.wallet)
+  const { isAuthenticated: ngoAuthenticated, ngoProfile } = useSelector((state: RootState) => state.ngoAuth)
+  
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
-  const handleWalletConnect = () => {
-    if (!isConnected) {
-      setWalletSelectorOpen(true)
-    } else {
-      dispatch(disconnectWallet())
-    }
+  const handleNGOLogout = () => {
+    // Clear NGO authentication
+    dispatch(logoutNGO())
+    // Redirect to home
+    router.push('/')
   }
 
-  const displayAddress = publicKey ? `${publicKey.slice(0, 6)}...${publicKey.slice(-4)}` : ""
+  const handleFullLogout = () => {
+    // Clear all browser data
+    clearAllBrowserData()
+    // Clear Redux state
+    dispatch(logoutNGO())
+    dispatch(disconnectWallet())
+    // Redirect to home
+    router.push('/')
+  }
 
-  return (
-    <>
+  // Don't render anything on the server for authenticated content
+  if (!isMounted) {
+    return (
       <header className="border-b border-border bg-white sticky top-0 z-50">
         <div className="mx-auto max-w-6xl px-4 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2">
@@ -38,54 +52,82 @@ export function Header() {
             </div>
             <span className="font-bold text-lg text-foreground">AidBridge</span>
           </Link>
+          
+          {/* Loading state for navigation */}
+          <div className="hidden md:flex gap-8">
+            <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-6 w-20 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <StellarPriceDisplay />
+            <div className="h-10 w-24 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
-          <nav className="hidden md:flex gap-8">
-            <Link href="/explore" className="text-foreground hover:text-primary transition">
-              Explore
+  return (
+    <header className="border-b border-border bg-white sticky top-0 z-50">
+      <div className="mx-auto max-w-6xl px-4 py-4 flex justify-between items-center">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">AB</span>
+          </div>
+          <span className="font-bold text-lg text-foreground">AidBridge</span>
+        </Link>
+
+        <nav className="hidden md:flex gap-8">
+          <Link href="/explore" className="text-foreground hover:text-primary transition">
+            Explore
+          </Link>
+          <Link href="/features" className="text-foreground hover:text-primary transition">
+            Features
+          </Link>
+          {ngoAuthenticated ? (
+            <Link href="/ngo-dashboard" className="text-foreground hover:text-primary transition">
+              NGO Dashboard
             </Link>
-            {isAuthenticated && (
-              <Link href="/ngo-dashboard" className="text-foreground hover:text-primary transition">
-                NGO Dashboard
-              </Link>
-            )}
+          ) : (
             <Link href="/verify" className="text-foreground hover:text-primary transition">
               Verify
             </Link>
-          </nav>
+          )}
+        </nav>
 
-          <div className="flex items-center gap-3">
-            {isAuthenticated && ngoProfile && (
+        <div className="flex items-center gap-3">
+          {/* Only show price in dashboard where needed */}
+          {typeof window !== 'undefined' && window.location.pathname.includes('dashboard') && (
+            <StellarPriceDisplay showPrice={true} />
+          )}
+          
+          {/* NGO Authentication Section */}
+          {ngoAuthenticated && ngoProfile && (
+            <div className="flex items-center gap-2">
               <div className="text-right hidden sm:block">
                 <p className="text-xs text-muted-foreground">NGO</p>
                 <p className="text-sm font-semibold text-foreground">{ngoProfile.name}</p>
               </div>
-            )}
-            {isConnected && (
-              <div className="text-right hidden sm:block">
-                <p className="text-xs text-muted-foreground">Balance</p>
-                <p className="text-sm font-semibold text-foreground">{balance.toFixed(2)} XLM</p>
-              </div>
-            )}
-            {isConnected && walletType && (
-              <div className="text-xs text-muted-foreground hidden sm:block px-2 py-1 bg-gray-100 rounded">
-                {walletType.charAt(0).toUpperCase() + walletType.slice(1)}
-              </div>
-            )}
-            <Button
-              onClick={handleWalletConnect}
-              disabled={isConnecting}
-              variant={isConnected ? "default" : "outline"}
-              className={isConnected ? "bg-accent hover:bg-accent/90" : ""}
-            >
-              <Wallet className="h-4 w-4 mr-2" />
-              {isConnecting ? "Connecting..." : isConnected ? `${displayAddress}` : "Connect Wallet"}
-            </Button>
-          </div>
+              <Button
+                onClick={handleNGOLogout}
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+                title="Logout NGO"
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            </div>
+          )}
+          
+          {/* User Wallet Section - Only show if NOT NGO authenticated */}
+          {!ngoAuthenticated && <WalletData />}
         </div>
-        {error && <div className="bg-red-50 border-t border-red-200 px-4 py-2 text-sm text-red-600">{error}</div>}
-      </header>
-
-      <WalletSelector isOpen={walletSelectorOpen} onClose={() => setWalletSelectorOpen(false)} />
-    </>
+      </div>
+      {error && <div className="bg-red-50 border-t border-red-200 px-4 py-2 text-sm text-red-600">{error}</div>}
+    </header>
   )
 }

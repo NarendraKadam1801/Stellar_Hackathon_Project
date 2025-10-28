@@ -12,14 +12,69 @@ app.use(cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true
 }));
-app.use(express.json({ limit: "10mb" }));
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('Content-Length:', req.headers['content-length']);
+    console.log('User-Agent:', req.headers['user-agent']);
+    console.log('Cookies:', req.headers.cookie);
+    next();
+});
+// Custom JSON parser with better error handling
+app.use((req, res, next) => {
+    // Skip JSON parsing for multipart/form-data requests (file uploads)
+    if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+        return next();
+    }
+    express.json({
+        limit: "10mb",
+        verify: (req, res, buf, encoding) => {
+            try {
+                JSON.parse(buf.toString());
+            }
+            catch (err) {
+                console.error("JSON Parse Error:", err.message);
+                console.error("Request URL:", req.url);
+                console.error("Request body:", buf.toString().substring(0, 200));
+                throw new Error("Invalid JSON format");
+            }
+        }
+    })(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 // Routes
 app.use("/api", routes);
+// Health check endpoint
+app.get("/health", (req, res) => {
+    res.json({
+        success: true,
+        message: "Server is running",
+        timestamp: new Date().toISOString()
+    });
+});
 // Global error handler
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error("Error occurred:", err.message);
+    console.error("Stack trace:", err.stack);
+    // Handle JSON parsing errors specifically
+    if (err instanceof SyntaxError && err.message.includes("JSON")) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid JSON format in request body",
+            error: process.env.NODE_ENV === "development" ? err.message : "Bad Request"
+        });
+    }
+    // Handle ApiError instances
+    if (err.statusCode && err.message) {
+        return res.status(err.statusCode).json({
+            success: false,
+            message: err.message,
+            error: process.env.NODE_ENV === "development" ? err.stack : undefined
+        });
+    }
+    // Handle other errors
     res.status(500).json({
         success: false,
         message: "Something went wrong!",

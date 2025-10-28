@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const donationSchame = new mongoose.Schema(
+const donationSchema = new mongoose.Schema(
   {
     currentTxn: {
       type: String,
@@ -12,7 +12,7 @@ const donationSchame = new mongoose.Schema(
     },
     Amount: {
       type: Number,
-      require: true,
+      required: true,
     },
     RemainingAmount: {
       type: Number,
@@ -22,4 +22,4 @@ const donationSchame = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const donationModel = mongoose.model("donationmodel", donationSchame);
+export const donationModel = mongoose.model("donationmodel", donationSchema);

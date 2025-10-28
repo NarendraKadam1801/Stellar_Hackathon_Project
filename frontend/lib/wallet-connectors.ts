@@ -1,21 +1,74 @@
+import { 
+  isConnected as freighterIsConnected,
+  requestAccess as freighterRequestAccess,
+  signTransaction as freighterSignTransaction
+} from "@stellar/freighter-api"
+
 export const walletConnectors = {
   freighter: {
     name: "Freighter",
     icon: "🔐",
-    isInstalled: () => typeof window !== "undefined" && !!window.stellar,
+    isInstalled: async () => {
+      if (typeof window === "undefined") return false
+      try {
+        const result = await freighterIsConnected()
+        return !result.error && result.isConnected
+      } catch {
+        return false
+      }
+    },
     connect: async () => {
-      if (!window.stellar) throw new Error("Freighter not installed")
-      const response = await window.stellar.requestAccess({ domain: "aidbridge.app" })
-      if (response.error) throw new Error(response.error.message)
-      return response.publicKey
+      try {
+        console.log("Using Freighter SDK")
+        
+        // Check if Freighter is connected
+        const connectedResult = await freighterIsConnected()
+        if (connectedResult.error || !connectedResult.isConnected) {
+          throw new Error("Freighter extension is not installed or not available")
+        }
+        
+        // Request access - this will prompt user to allow the app
+        const response = await freighterRequestAccess()
+        console.log("Freighter response:", response)
+        
+        if (response.error) {
+          throw new Error(response.error || "User denied access to Freighter")
+        }
+        
+        if (response.address) {
+          console.log("Connected with public key:", response.address)
+          return response.address
+        }
+        
+        throw new Error("No address returned from Freighter")
+      } catch (error) {
+        console.error("Freighter SDK error:", error)
+        throw error
+      }
     },
     signTransaction: async (tx: string) => {
-      if (!window.stellar) throw new Error("Freighter not available")
-      const response = await window.stellar.signTransaction(tx, {
-        networkPassphrase: "Test SDF Network ; September 2015",
-      })
-      if (response.error) throw new Error(response.error.message)
-      return response.signedXDR
+      console.log("Signing transaction with Freighter SDK:", tx)
+      
+      try {
+        const response = await freighterSignTransaction(tx, {
+          networkPassphrase: "Test SDF Network ; September 2015",
+        })
+        console.log("Freighter sign response:", response)
+        
+        if (response.error) {
+          throw new Error(response.error || "Transaction signing failed")
+        }
+        
+        if (response.signedTxXdr) {
+          console.log("Transaction signed successfully")
+          return response.signedTxXdr
+        }
+        
+        throw new Error("No signed transaction returned")
+      } catch (error) {
+        console.error("Freighter sign error:", error)
+        throw error
+      }
     },
   },
 

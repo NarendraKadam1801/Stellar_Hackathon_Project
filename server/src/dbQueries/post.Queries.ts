@@ -1,12 +1,12 @@
-import { postModel } from "../model/post.model.js";
+import { postModel, IPost } from "../model/post.model.js";
 import { PostData } from "../controler/post.controler.js";
 
 
-const getPosts=async()=>{
+const getPosts = async (): Promise<IPost[]> => {
     try {
         return await postModel.find();
     } catch (error) {
-        return error;
+        throw error;
     }
 }
 

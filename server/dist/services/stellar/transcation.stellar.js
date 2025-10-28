@@ -48,7 +48,7 @@ const sendPaymentToWallet = async (walletData) => {
         // Convert string to number
         const balanceAsNumber = parseFloat(xlmBalance?.balance); // 123.456
         if (balanceAsNumber <= 0)
-            throw new Error("low balance");
+            throw new Error("Insufficient balance for transaction");
         // Build payment transaction
         const transaction = new TransactionBuilder(senderAccount, {
             fee: BASE_FEE,

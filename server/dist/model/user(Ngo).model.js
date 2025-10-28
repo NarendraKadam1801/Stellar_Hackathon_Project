@@ -63,12 +63,13 @@ NgoSchema.methods.isPasswordCorrect = async function (password) {
     return await bcrypt.compare(password, this.Password);
 };
 NgoSchema.methods.generateAccessToken = function () {
-    const secret = process.env.ATS;
+    const secret = process.env.ATS || "sfdsdf";
     if (!secret) {
         throw new Error("Access token secret (ATS) is missing");
     }
     return jwt.sign({
         id: this._id,
+        userId: this._id, // Add userId for middleware compatibility
         email: this.Email,
         NgoName: this.NgoName,
         walletAddr: this.PublicKey,
@@ -77,7 +78,7 @@ NgoSchema.methods.generateAccessToken = function () {
     });
 };
 NgoSchema.methods.generateRefreshToken = function () {
-    const secret = process.env.RTS;
+    const secret = process.env.RTS || "sdfsd";
     if (!secret) {
         throw new Error("Refresh token secret (RTS) is missing");
     }

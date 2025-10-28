@@ -118,5 +118,18 @@ declare global {
         error?: { message: string }
       }>
     }
+    freighter?: {
+      requestAccess: (options: { domain: string }) => Promise<{
+        publicKey?: string
+        error?: { message: string }
+      }>
+      signTransaction: (
+        tx: string,
+        options: { networkPassphrase: string },
+      ) => Promise<{
+        signedXDR?: string
+        error?: { message: string }
+      }>
+    }
   }
 }

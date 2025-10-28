@@ -3,7 +3,7 @@ const SOROBAN_RPC_URL = process.env.SOROBAN_RPC_URL || "https://soroban-testnet.
 const sorobanServer = new rpc.Server(SOROBAN_RPC_URL);
 export const saveContractWithWallet = async (userData) => {
     try {
-        const contract = new Contract(process.env.CONTRACTIDF);
+        const contract = new Contract(process.env.CONTRACTIDF || "CDGGEIPVLL67QR5TFHKWJ776L6VZSRIV3LMHHKXHPPUXQWTWLBBQ4QO2");
         const sourceKeyPair = Keypair.fromSecret(userData.privateKey);
         const accountId = sourceKeyPair.publicKey();
         const account = await sorobanServer.getAccount(accountId);
@@ -55,7 +55,7 @@ export const saveContractWithWallet = async (userData) => {
 // Add function to get latest data (similar to your working code)
 export const getLatestData = async (privateKey) => {
     try {
-        const contract = new Contract(process.env.CONTRACTIDF);
+        const contract = new Contract(process.env.CONTRACTIDF || "CDGGEIPVLL67QR5TFHKWJ776L6VZSRIV3LMHHKXHPPUXQWTWLBBQ4QO2");
         const sourceKeyPair = Keypair.fromSecret(privateKey);
         const accountId = sourceKeyPair.publicKey();
         const account = await sorobanServer.getAccount(accountId);

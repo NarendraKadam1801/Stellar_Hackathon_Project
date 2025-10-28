@@ -6,52 +6,101 @@ import { Header } from "@/components/header"
 import { TaskCard } from "@/components/task-card"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, CheckCircle2, Zap, Shield } from "lucide-react"
-import { postsApi } from "@/lib/api-client"
+import { apiService, type Post } from "@/lib/api-service"
+import { mockTasks } from "@/lib/mock-data"
+import { AuthModal } from "@/components/auth-modal"
+import { NGOAuthModal } from "@/components/ngo-auth-modal"
+import { useDispatch, useSelector } from "react-redux"
+import type { RootState, AppDispatch } from "@/lib/redux/store"
+import { openAuthModal } from "@/lib/redux/slices/ui-slice"
+// Remove useNGOAuth import as we're using Redux now
 
 export default function Home() {
-  const [featuredTasks, setFeaturedTasks] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({ totalRaised: 0, activeDonors: 0, verifiedNGOs: 0 })
+  const dispatch = useDispatch<AppDispatch>()
+  const { isAuthenticated: ngoAuthenticated } = useSelector((state: RootState) => state.ngoAuth)
+  const { isConnected: walletConnected } = useSelector((state: RootState) => state.wallet)
+  const [posts, setPosts] = useState<Post[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState({
+    totalRaised: 1250000,
+    activeDonors: 1200,
+    verifiedNGOs: 54,
+  })
 
   useEffect(() => {
-    const fetchFeaturedTasks = async () => {
-      try {
-        setLoading(true)
-        const response = await postsApi.getAll()
-        const posts = response.data || []
-        
-        // Map backend data to frontend format
-        const mappedPosts = posts.map((post: any) => ({
-          id: post._id,
-          title: post.Title,
-          ngo: "NGO", // Placeholder
-          description: post.Description,
-          goal: parseFloat(post.NeedAmount) || 0,
-          raised: 0, // Set to 0 as it's missing in current API data
-          image: post.ImgCid ? `https://gateway.pinata.cloud/ipfs/${post.ImgCid}` : "/placeholder.svg",
-          category: post.Type,
-        }))
-        
-        setFeaturedTasks(mappedPosts.slice(0, 3))
-
-        // Calculate stats from posts
-        const totalRaised = mappedPosts.reduce((sum, post) => sum + (post.raised || 0), 0)
-        const activeDonors = mappedPosts.length * 2 // Estimate based on posts
-        setStats({
-          totalRaised,
-          activeDonors,
-          verifiedNGOs: Math.ceil(mappedPosts.length / 2),
-        })
-      } catch (error) {
-        console.error("[v0] Error fetching featured tasks:", error)
-        setFeaturedTasks([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchFeaturedTasks()
+    loadPosts()
+    loadStats()
   }, [])
+
+  const loadStats = async () => {
+    try {
+      const statsResponse = await apiService.getStats()
+      if (statsResponse.success) {
+        setStats({
+          totalRaised: statsResponse.data.totalRaised,
+          activeDonors: statsResponse.data.activeDonors,
+          verifiedNGOs: statsResponse.data.verifiedNGOs,
+        })
+      }
+    } catch (err) {
+      console.error("Error loading stats:", err)
+    }
+  }
+
+  const loadPosts = async () => {
+    try {
+      setIsLoading(true)
+      const response = await apiService.getPosts()
+      if (response.success) {
+        setPosts(response.data)
+      }
+    } catch (err) {
+      console.error("Error loading posts:", err)
+      setError("Failed to load posts")
+      // Fallback to mock data
+      setPosts(mockTasks.map(task => ({
+        _id: task.id.toString(),
+        Title: task.title,
+        Type: task.category,
+        Description: task.description,
+        Location: task.location,
+        ImgCid: task.image,
+        NeedAmount: task.goal.toString(),
+        WalletAddr: "GBUQWP3BOUZX34ULNQG23RQ6F4BVXEYMJUCHUZI7VCZE7FDCVXWH6HUP",
+        NgoRef: task.ngo,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Convert API posts to task format for TaskCard component
+  const convertPostToTask = (post: Post) => ({
+    id: post._id, // Use MongoDB _id directly (string), not parseInt
+    _id: post._id, // Keep original _id for backend calls
+    Title: post.Title,
+    title: post.Title, // For backward compatibility
+    NgoRef: post.NgoRef,
+    ngo: post.NgoRef, // For backward compatibility
+    Description: post.Description,
+    description: post.Description, // For backward compatibility
+    NeedAmount: typeof post.NeedAmount === 'string' ? parseInt(post.NeedAmount) : post.NeedAmount,
+    goal: typeof post.NeedAmount === 'string' ? parseInt(post.NeedAmount) : post.NeedAmount, // For backward compatibility
+    CollectedAmount: post.CollectedAmount || 0,
+    raised: post.CollectedAmount || 0, // For backward compatibility
+    ImgCid: post.ImgCid || '',
+    image: post.ImgCid || '', // For backward compatibility
+    Type: post.Type,
+    category: post.Type, // For backward compatibility
+    Location: post.Location,
+    WalletAddr: post.WalletAddr || '', // Include wallet address
+  })
+
+  // Show all posts instead of just featured ones
+  // const featuredTasks = posts.slice(0, 3).map(convertPostToTask)
 
   return (
     <div className="min-h-screen bg-background">
@@ -73,26 +122,39 @@ export default function Home() {
                   Browse Tasks <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/ngo/auth?mode=signup">
+              <Link href="/features">
                 <Button size="lg" variant="outline">
-                  Create Task
+                  View Features
                 </Button>
               </Link>
+              {ngoAuthenticated ? (
+                <Link href="/ngo-dashboard">
+                  <Button size="lg" variant="outline">
+                    Dashboard
+                  </Button>
+                </Link>
+              ) : !walletConnected ? (
+                <Link href="/ngo/login">
+                  <Button size="lg" variant="outline">
+                    NGO Login
+                  </Button>
+                </Link>
+              ) : null}
             </div>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-6 mt-16">
             <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
-              <div className="text-3xl font-bold text-primary">₹{(stats.totalRaised / 100000).toFixed(2)}L</div>
+              <div className="text-3xl font-bold text-primary">₹{stats.totalRaised.toLocaleString('en-IN')}</div>
               <div className="text-muted-foreground">Total Raised</div>
             </div>
             <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
-              <div className="text-3xl font-bold text-accent">{stats.activeDonors}+</div>
+              <div className="text-3xl font-bold text-accent">{stats.activeDonors.toLocaleString('en-IN')}+</div>
               <div className="text-muted-foreground">Active Donors</div>
             </div>
             <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
-              <div className="text-3xl font-bold text-accent">{stats.verifiedNGOs}</div>
+              <div className="text-3xl font-bold text-accent">{stats.verifiedNGOs.toLocaleString('en-IN')}</div>
               <div className="text-muted-foreground">Verified NGOs</div>
             </div>
           </div>
@@ -103,21 +165,22 @@ export default function Home() {
       <section className="py-16 px-4">
         <div className="mx-auto max-w-6xl">
           <h2 className="text-3xl font-bold text-foreground mb-12">Featured Tasks</h2>
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Loading featured tasks...</p>
-            </div>
-          ) : featuredTasks.length > 0 ? (
+          {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {featuredTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-gray-200 animate-pulse rounded-lg h-80"></div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No tasks available yet</p>
+          ) : error ? (
+            <div className="text-center text-red-500 mb-8">
+              {error} - Showing sample data
             </div>
-          )}
+          ) : null}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {posts.map((post) => (
+              <TaskCard key={post._id} task={convertPostToTask(post)} />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -154,6 +217,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Auth Modal */}
+      <AuthModal />
+      <NGOAuthModal />
     </div>
   )
 }

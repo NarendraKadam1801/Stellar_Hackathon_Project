@@ -78,9 +78,10 @@ const sendPaymentToWallet = async (
     const senderAccount = await STELLAR_CONFIG.server.loadAccount(
       senderPublicKey
     );
+
     const getBalancedata = await getBalance(senderPublicKey);
     const xlmBalance = getBalancedata.find((b) => b.asset === "XLM");
-
+    console.log(xlmBalance)
     // Convert string to number
     const balanceAsNumber = parseFloat(xlmBalance?.balance); // 123.456
     if(balanceAsNumber<=0) throw new Error("Insufficient balance for transaction")
@@ -97,7 +98,7 @@ const sendPaymentToWallet = async (
           amount: amount.toString(),
         })
       )
-      .addMemo(Memo.text(`CID: ${meta.cid}`))
+      .addMemo(Memo.text('Expense'))
       .setTimeout(30)
       .build();
 

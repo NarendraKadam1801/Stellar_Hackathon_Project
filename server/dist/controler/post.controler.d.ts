@@ -8,7 +8,7 @@ export interface PostData {
     ImgCid: string;
     NeedAmount: string;
     WalletAddr: string;
-    NgoRef: Types.ObjectId;
+    NgoRef?: Types.ObjectId;
 }
 declare const getAllPost: (req: Request, res: Response, next: NextFunction) => void;
 declare const createPost: (req: Request, res: Response, next: NextFunction) => void;

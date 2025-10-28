@@ -5,193 +5,93 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { useRouter } from "next/navigation"
-import { Task } from "@/types"
-import { Tooltip } from "@/components/ui/tooltip"
-import { Info } from "lucide-react"
-import { useState } from "react"
-import { DonationModal } from "./donation-modal"
-import { Check, Copy } from "lucide-react"
-import { QRCode } from 'react-qr-code'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+import { useMounted } from "@/hooks/use-mounted"
 
-export function TaskCard({ task }: { task: Task }) {
-  const router = useRouter()
-  const [showDonationModal, setShowDonationModal] = useState(false)
-  const [copied, setCopied] = useState(false)
+interface BaseTask {
+  _id: string
+  Title?: string
+  title?: string
+  NgoRef?: string
+  Description?: string
+  description?: string
+  NeedAmount: string | number
+  CollectedAmount?: number
+  ImgCid: string
+  Type?: string
+  Location?: string
+  WalletAddr?: string  // Add wallet address field
+  // For backward compatibility with mock data
+  id?: string | number
+  ngo?: string
+  goal?: number
+  raised?: number
+  image?: string
+  category?: string
+}
 
-  const handleClick = () => {
-    // Convert task to URL-safe string and pass as query parameter
-    const taskData = encodeURIComponent(JSON.stringify(task))
-    router.push(`/task/${task._id}?taskData=${taskData}`)
-  }
+interface TaskCardProps {
+  task: BaseTask
+}
 
-  const safeRaised = task.raised ?? 0
-  const safeGoal = task.goal ?? 0
-  const progressPercent = safeGoal > 0 ? (safeRaised / safeGoal) * 100 : 0
-  
-  // Calculate remaining amount needed
-  const remainingAmount = safeGoal - safeRaised
-  
-  // Format wallet address for display
-  const shortWalletAddr = task.WalletAddr ? 
-    `${task.WalletAddr.slice(0, 6)}...${task.WalletAddr.slice(-4)}` : 
-    'Not available'
+export function TaskCard({ task }: TaskCardProps) {
+  const mounted = useMounted()
+  const goal = typeof task.NeedAmount === 'string' ? parseFloat(task.NeedAmount) : task.NeedAmount;
+  const raised = task.CollectedAmount || 0;
+  const progressPercent = (raised / goal) * 100
 
-  const handleDonationSuccess = (txHash: string) => {
-    // You might want to update the UI or show a success message
-    console.log("Donation successful:", txHash)
-  }
-
-  const handleCopyAddress = async (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent card click event
-    
-    try {
-      await navigator.clipboard.writeText(task.WalletAddr)
-      setCopied(true)
-      // Reset copy confirmation after 2 seconds
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error('Failed to copy:', err)
+  // Custom number formatting to avoid hydration mismatches
+  const formatNumber = (num?: number | null): string => {
+    if (num === undefined || num === null) return '0';
+    if (!mounted) {
+      // Return a consistent format during SSR
+      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
-  }
-
-  const generatePaymentURI = (amount: string) => {
-    const params = new URLSearchParams({
-      destination: task.WalletAddr,
-      amount: amount,
-      asset_code: 'XLM',
-      memo: `Donation for ${task._id}`,
-      memo_type: 'text'
-    })
-    return `web+stellar:pay?${params.toString()}`
-  }
-
-  const handleCreatePaymentRequest = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    const paymentURI = generatePaymentURI(task.goal.toString())
-    setShowDonationModal(true)
+    return num.toLocaleString();
   }
 
   return (
-    <>
-      <Card 
-        onClick={handleClick}
-        className="cursor-pointer overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-md"
-      >
-        <img 
-          src={task.image || "/placeholder.svg"} 
-          alt={task.title} 
-          className="h-48 w-full object-cover rounded-t-lg" 
-        />
-        <div className="p-4">
-          <div className="mb-2 flex justify-between items-start">
-            <h3 className="line-clamp-2 text-lg font-semibold text-foreground">{task.title}</h3>
-            <Badge variant="secondary" className="text-xs">
-              {task.category}
-            </Badge>
-          </div>
-          <p className="mb-3 text-sm text-muted-foreground">{task.ngo}</p>
-          <p className="mb-4 line-clamp-2 text-sm text-muted-foreground">{task.description}</p>
-
-          {/* Donation Progress Section */}
-          <div className="mb-4">
-            <div className="mb-2 flex justify-between text-sm">
-              <span className="font-semibold">Raised: ₹{safeRaised.toLocaleString()}</span> 
-              <span className="text-muted-foreground">Goal: ₹{safeGoal.toLocaleString()}</span>
-            </div>
-            <Progress value={progressPercent} className="h-2" />
-            <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-              <span>{Math.round(progressPercent)}% Funded</span>
-              <span>Remaining: ₹{remainingAmount.toLocaleString()}</span>
-            </div>
-          </div>
-
-          {/* Donation Information */}
-          <div className="mb-4 p-3 bg-muted rounded-md">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Donation Address</span>
-              <Tooltip content="Stellar wallet address for donations">
-                <Info className="h-4 w-4 text-muted-foreground" />
-              </Tooltip>
-            </div>
-            <code className="text-xs block truncate">{shortWalletAddr}</code>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="space-y-2">
-            <Button 
-              className="w-full bg-primary hover:bg-primary/90"
-              onClick={handleCreatePaymentRequest}
-            >
-              Request Payment
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={handleCopyAddress}
-            >
-              {copied ? (
-                <>
-                  <Check className="mr-2 h-4 w-4" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy Wallet Address
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      <DonationModal
-        isOpen={showDonationModal}
-        onClose={() => setShowDonationModal(false)}
-        task={task}
-        onSuccess={handleDonationSuccess}
+    <Card className="overflow-hidden hover:shadow-lg transition">
+      <img 
+        src={task.ImgCid || task.image || "/placeholder.svg"} 
+        alt={task.Title || task.title || 'Post image'} 
+        className="w-full h-48 object-cover" 
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          target.src = "/placeholder.svg";
+        }}
       />
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="font-semibold text-foreground line-clamp-2">
+            {task.Title || task.title || 'Untitled Post'}
+          </h3>
+          <Badge variant="secondary" className="text-xs">
+            {task.Type || task.category || 'Uncategorized'}
+          </Badge>
+        </div>
+        {task.NgoRef && (
+          <p className="text-sm text-muted-foreground mb-3">
+            {task.ngo || `NGO ID: ${task.NgoRef}`}
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+          {task.Description || task.description || 'No description available.'}
+        </p>
 
-      <Dialog open={showDonationModal} onOpenChange={setShowDonationModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Payment Request for {task.title}</DialogTitle>
-            <DialogDescription>
-              Scan this code with your Stellar wallet to donate
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col items-center space-y-4 p-4">
-            <QRCode 
-              value={generatePaymentURI(task.goal.toString())}
-              size={200}
-            />
-            
-            <div className="text-center">
-              <p className="font-medium">Amount: {task.goal} XLM</p>
-              <p className="text-sm text-muted-foreground mt-1">To: {shortWalletAddr}</p>
-            </div>
-
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                window.location.href = generatePaymentURI(task.goal.toString())
-              }}
-            >
-              Open in Wallet
-            </Button>
+        <div className="mb-4">
+          <div className="flex justify-between text-sm mb-2">
+            <span className="font-semibold">₹{formatNumber(raised)} raised</span>
+            <span>₹{formatNumber(goal)} goal</span>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+          <Progress value={progressPercent} className="h-2" />
+        </div>
+
+        <Link href={`/task/${task.id}`}>
+          <Button className="w-full bg-primary hover:bg-primary/90">
+            {raised >= goal ? "Completed" : "Donate"}
+          </Button>
+        </Link>
+      </div>
+    </Card>
   )
 }

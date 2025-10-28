@@ -3,9 +3,17 @@ import { expenseModel } from "../model/expense.model.js";
 
 
 const getPrevTxn=async(PostId:string):Promise<string>=>{
-    const currentTxn= await expenseModel.findOne({_id:new mongoose.Types.ObjectId(PostId)}).sort({createdAt:-1}).select("currentTxn -_id").lean<{ currentTxn: string }>();
-    if(!currentTxn) throw new Error("No previous transaction found for this post");
-    return currentTxn.currentTxn;
+    try {
+        const currentTxn= await expenseModel.findOne({postIDs:new mongoose.Types.ObjectId(PostId)}).sort({createdAt:-1}).select("currentTxn -_id").lean<{ currentTxn: string }>();
+        if(!currentTxn) {
+            // Return empty string instead of throwing error for new posts
+            return "";
+        }
+        return currentTxn.currentTxn;
+    } catch (error) {
+        console.error("Error getting previous transaction:", error);
+        return "";
+    }
 }  
 
 

@@ -10,9 +10,9 @@ const isValidCid = async (cid) => {
 };
 const ImgFormater = async (cid) => {
     try {
-        const ImgUrl = `https://${process.env.PINATA_GATEWAY}/ipfs/${cid}`;
+        const ImgUrl = `https://${process.env.PINATA_GATEWAY || "azure-official-egret-883.mypinata.cloud"}/ipfs/${cid}`;
         if (!ImgUrl)
-            throw new Error("NO image url");
+            throw new Error("Failed to generate image URL");
         return ImgUrl;
     }
     catch (error) {
