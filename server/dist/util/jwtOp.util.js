@@ -1,10 +1,15 @@
 import jwt from 'jsonwebtoken';
 import { ApiError } from './apiError.util.js';
+import dotenv from 'dotenv';
+dotenv.config();
 // Generate Access Token
 const genAccessToken = async (user) => {
     try {
         const { email, walletAddr, NgoName, id } = user;
-        const secret = process.env.ATS || "sfdsdf";
+        if (!process.env.ATS) {
+            throw new Error('ATS (Access Token Secret) is not defined in environment variables');
+        }
+        const secret = process.env.ATS;
         if (!secret || !user) {
             throw new ApiError(500, "Secret is missing or user info is invalid");
         }
@@ -12,11 +17,10 @@ const genAccessToken = async (user) => {
             email,
             NgoName,
             walletAddr,
-            userId: id, // Add userId for middleware
             id: id, // Also include id for consistency
         }, secret, // Access token secret
         {
-            expiresIn: process.env.ATE || "15m" // Access token expiry
+            expiresIn: process.env.ATE || '15m' // Access token expiry
         });
     }
     catch (error) {
@@ -27,7 +31,10 @@ const genAccessToken = async (user) => {
 const genRefreshToken = async (user) => {
     try {
         const { id, walletAddr } = user;
-        const secret = process.env.RTS || "sdfsd";
+        if (!process.env.RTS) {
+            throw new Error('RTS (Refresh Token Secret) is not defined in environment variables');
+        }
+        const secret = process.env.RTS;
         if (!secret) {
             throw new ApiError(500, "Refresh token secret is missing");
         }
@@ -35,7 +42,7 @@ const genRefreshToken = async (user) => {
             id,
             walletAddr
         }, secret, {
-            expiresIn: process.env.RTE || "7d" // Refresh token expiry
+            expiresIn: process.env.RTE || '7d' // Refresh token expiry
         });
     }
     catch (error) {

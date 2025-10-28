@@ -6,8 +6,15 @@ export interface userSingupData {
     email: string;
     phoneNo: string;
     password: string;
-    publicKey?: string;
-    privateKey?: string;
+    PublicKey?: string;
+    PrivateKey?: string;
+    walletAddr?: string;
+    NgoName?: string;
+    RegNumber?: string;
+    Description?: string;
+    Email?: string;
+    PhoneNo?: string;
+    Password?: string;
 }
 export interface userLoginData {
     email: string;

@@ -1,7 +1,12 @@
 import { Request, Response, NextFunction } from "express";
-interface RequestK extends Request {
+export interface RequestK extends Request {
     NgoId?: string;
-    user?: any;
+    user?: {
+        id: string;
+        email: string;
+        walletAddr: string;
+        NgoName: string;
+    };
 }
 declare const verifyToken: (req: RequestK, res: Response, next: NextFunction) => Promise<Response<any, Record<string, any>> | undefined>;
 export { verifyToken };

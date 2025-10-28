@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { ngoModel } from "../model/user(Ngo).model.js";
+import { postModel } from "../model/post.model.js";
 const findUser = async (userData) => {
     try {
         if (!userData || (!userData?.email && !userData?.Id))
@@ -29,8 +30,9 @@ const saveDataAndToken = async (userData) => {
             NgoName: userData.ngoName,
             RegNumber: userData.regNumber,
             Description: userData.description,
-            PublicKey: userData.publicKey,
-            PrivateKey: userData.privateKey,
+            PublicKey: userData.PublicKey, // Using PascalCase to match interface
+            PrivateKey: userData.PrivateKey, // Using PascalCase to match interface
+            walletAddr: userData.walletAddr || userData.PublicKey, // Include wallet address
             PhoneNo: userData.phoneNo,
             Password: userData.password,
         });
@@ -59,23 +61,31 @@ const saveDataAndToken = async (userData) => {
 //never write code this way!!
 const findUserWithTokenAndPassCheck = async (userData) => {
     try {
-        if (!userData || !userData.email || !userData.password)
-            throw new Error("provide email or password");
-        const data = await ngoModel.findOne({ Email: userData.email });
-        if (!data)
+        if (!userData || !userData.email || !userData.password) {
+            throw new Error("Email and password are required");
+        }
+        // Find user by email
+        const user = await ngoModel.findOne({ Email: userData.email });
+        if (!user) {
             throw new Error("User not found with this email");
-        const isVaildPassword = await data.isPasswordCorrect(userData.password);
-        if (!isVaildPassword)
+        }
+        // Verify password
+        const isValidPassword = await user.isPasswordCorrect(userData.password);
+        if (!isValidPassword) {
             throw new Error("Invalid password");
-        const { accessToken, refreshToken } = await data.generateTokens();
+        }
+        // Generate tokens with wallet address
+        const { accessToken, refreshToken } = await user.generateTokens();
+        // Return user data with tokens
         return {
             accessToken,
             refreshToken,
             userData: {
-                Id: data._id,
-                Email: data.Email,
-                NgoName: data.NgoName,
-                PublicKey: data.PublicKey,
+                Id: user._id,
+                Email: user.Email,
+                NgoName: user.NgoName,
+                walletAddr: user.PublicKey, // Include wallet address
+                PublicKey: user.PublicKey, // For backward compatibility
             }
         };
     }
@@ -83,13 +93,50 @@ const findUserWithTokenAndPassCheck = async (userData) => {
         return error;
     }
 };
-const getPrivateKey = async (Id) => {
-    if (!Id)
-        throw new Error("Please provide userId");
-    const UserData = await ngoModel.findOne({ _id: new mongoose.Types.ObjectId(Id) }).select("PrivateKey -_Id").lean();
-    if (!UserData)
-        throw new Error("no privatekey found!!");
-    return UserData.PrivateKey;
+/**
+ * Retrieves the private key of the NGO associated with a specific post
+ * @param postId - The ID of the post to find the associated NGO
+ * @returns The private key of the associated NGO
+ * @throws Error if post not found, no associated NGO, or no private key available
+ */
+const getPrivateKey = async (postId) => {
+    if (!postId)
+        throw new Error("Post ID is required");
+    try {
+        const result = await postModel.aggregate([
+            // Match the post by ID
+            { $match: { _id: new mongoose.Types.ObjectId(postId) } },
+            // Lookup the NGO that owns this post
+            {
+                $lookup: {
+                    from: "ngomodels", // Collection name in MongoDB (usually lowercase plural)
+                    localField: "NgoRef", // Field in posts collection
+                    foreignField: "_id", // Field in ngos collection
+                    as: "ngo"
+                }
+            },
+            // Unwind the ngo array (since lookup returns an array)
+            { $unwind: "$ngo" },
+            // Project only the private key
+            {
+                $project: {
+                    _id: 0,
+                    privateKey: "$ngo.PrivateKey"
+                }
+            }
+        ]);
+        if (!result.length) {
+            throw new Error("Post not found or no associated NGO");
+        }
+        if (!result[0].privateKey) {
+            throw new Error("No private key found for the associated NGO");
+        }
+        return result[0].privateKey;
+    }
+    catch (error) {
+        console.error("Error in getPrivateKey:", error);
+        throw new Error("Failed to retrieve private key");
+    }
 };
 export { findUser, saveDataAndToken, findUserWithTokenAndPassCheck, getPrivateKey };
 //# sourceMappingURL=user.Queries.js.map

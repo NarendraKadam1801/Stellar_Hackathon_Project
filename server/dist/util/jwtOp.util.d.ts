@@ -4,7 +4,7 @@ interface TokenPayload {
     walletAddr?: string;
     id?: string;
 }
-declare const genAccessToken: (user: TokenPayload) => Promise<never>;
-declare const genRefreshToken: (user: TokenPayload) => Promise<never>;
+declare const genAccessToken: (user: TokenPayload) => Promise<string>;
+declare const genRefreshToken: (user: TokenPayload) => Promise<string>;
 export { genAccessToken, genRefreshToken };
 //# sourceMappingURL=jwtOp.util.d.ts.map

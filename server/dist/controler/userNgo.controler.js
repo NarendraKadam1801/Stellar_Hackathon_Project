@@ -42,11 +42,12 @@ const singup = AsyncHandler(async (req, res) => {
         if (!stellarAccount || !stellarAccount.publicKey || !stellarAccount.secret) {
             throw new ApiError(500, "Failed to create blockchain account");
         }
-        // Add blockchain keys to user data
+        // Add blockchain keys to user data with correct field names (PascalCase to match model)
         const userDataWithKeys = {
             ...userData,
-            publicKey: stellarAccount.publicKey,
-            privateKey: stellarAccount.secret
+            PublicKey: stellarAccount.publicKey, // Changed from publicKey to PublicKey
+            PrivateKey: stellarAccount.secret, // Changed from privateKey to PrivateKey
+            walletAddr: stellarAccount.publicKey // Also set walletAddr for consistency
         };
         console.log(`✅ Stellar account created: ${stellarAccount.publicKey}`);
         // Save user data with blockchain keys
@@ -87,16 +88,16 @@ const refreshToken = AsyncHandler(async (req, res) => {
     try {
         // Verify the refresh token
         const decoded = jwt.verify(refreshToken, process.env.RTS || "sdfsd");
-        if (!decoded || !decoded.id) {
+        if (!decoded || !decoded.Id) {
             throw new ApiError(401, "Invalid refresh token");
         }
         // Find user by ID
-        const user = await findUser({ id: decoded.id });
+        const user = await findUser({ _id: decoded.Id });
         if (!user || user.length === 0) {
             throw new ApiError(401, "User not found");
         }
         // Generate new tokens
-        const userDoc = user[0];
+        const userDoc = user[0]; // Non-null assertion - we know this exists because of the previous check
         const { accessToken, refreshToken: newRefreshToken } = await userDoc.generateTokens();
         // Set new cookies
         res.cookie('accessToken', accessToken, {

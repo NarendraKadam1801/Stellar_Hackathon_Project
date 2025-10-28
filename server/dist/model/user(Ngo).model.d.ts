@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
-interface INgo {
+export interface INgo {
+    _id?: mongoose.Types.ObjectId;
     NgoName: string;
     RegNumber: string;
     Description: string;
@@ -10,7 +11,7 @@ interface INgo {
     PrivateKey: string;
     RefreshToken?: string;
 }
-interface INgoMethods {
+export interface INgoMethods {
     isPasswordCorrect(password: string): Promise<boolean>;
     generateAccessToken(): string;
     generateRefreshToken(): string;
@@ -20,13 +21,13 @@ interface INgoMethods {
     }>;
 }
 type INgoModel = mongoose.Model<INgo, {}, INgoMethods>;
-export declare const ngoModel: mongoose.Model<INgo, {}, INgoMethods, {}, mongoose.Document<unknown, {}, INgo, {}, mongoose.DefaultSchemaOptions> & Omit<INgo & {
+export declare const ngoModel: mongoose.Model<INgo, {}, INgoMethods, {}, mongoose.Document<unknown, {}, INgo, {}, mongoose.DefaultSchemaOptions> & Omit<INgo & Required<{
     _id: mongoose.Types.ObjectId;
-} & {
+}> & {
     __v: number;
-}, keyof INgoMethods> & INgoMethods, mongoose.Schema<INgo, INgoModel, INgoMethods, {}, {}, {}, mongoose.DefaultSchemaOptions, INgo, mongoose.Document<unknown, {}, mongoose.FlatRecord<INgo>, {}, mongoose.ResolveSchemaOptions<mongoose.DefaultSchemaOptions>> & Omit<mongoose.FlatRecord<INgo> & {
+}, keyof INgoMethods> & INgoMethods, mongoose.Schema<INgo, INgoModel, INgoMethods, {}, {}, {}, mongoose.DefaultSchemaOptions, INgo, mongoose.Document<unknown, {}, mongoose.FlatRecord<INgo>, {}, mongoose.ResolveSchemaOptions<mongoose.DefaultSchemaOptions>> & Omit<mongoose.FlatRecord<INgo> & Required<{
     _id: mongoose.Types.ObjectId;
-} & {
+}> & {
     __v: number;
 }, keyof INgoMethods> & INgoMethods>>;
 export {};

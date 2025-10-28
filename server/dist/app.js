@@ -8,8 +8,11 @@ import routes from "./routes/index.routes.js";
 dotenv.config();
 const app = express();
 // Middleware
+if (!process.env.FRONTEND_URL) {
+    throw new Error('FRONTEND_URL is not defined in environment variables');
+}
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL,
     credentials: true
 }));
 // Request logging middleware

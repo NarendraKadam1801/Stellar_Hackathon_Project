@@ -1,10 +1,12 @@
 import { STELLAR_CONFIG, createKeypair } from "./config.stellar.js";
 import { TransactionBuilder, Operation, Keypair, Account, xdr } from "@stellar/stellar-sdk";
+import dotenv from "dotenv";
+dotenv.config();
 //this function take's admin private key to fund , new account which are ngo via doing that 
 //it create's new account on blockchain 
 export const createAccount = async () => {
     // Check if environment variable is set, if not use a test key for development
-    const baseAccountKey = process.env.BASEACCOUNTST_KEY || "SCDQAPJEXL2FEQHHP6UT4QNFZGUJZSDUXQ7PIQ4EBBUGN5Y2FJTJI6XT";
+    const baseAccountKey = process.env.BASEACCOUNTST_KEY;
     console.log("Using base account key:", baseAccountKey.substring(0, 10) + "...");
     if (!baseAccountKey) {
         throw new Error("BASEACCOUNTST_KEY environment variable is not set");

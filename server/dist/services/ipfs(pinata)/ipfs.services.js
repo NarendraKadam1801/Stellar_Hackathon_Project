@@ -1,8 +1,16 @@
 import { PinataSDK } from "pinata";
 import fs from "fs";
+import dotenv from "dotenv";
+dotenv.config();
+if (!process.env.PINATA_JWT) {
+    throw new Error('PINATA_JWT is not defined in environment variables');
+}
+if (!process.env.PINATA_GATEWAY) {
+    throw new Error('PINATA_GATEWAY is not defined in environment variables');
+}
 const pinata = new PinataSDK({
-    pinataJwt: process.env.PINATA_JWT || "87413611f292892656bb",
-    pinataGateway: process.env.PINATA_GATEWAY || "azure-official-egret-883.mypinata.cloud"
+    pinataJwt: process.env.PINATA_JWT,
+    pinataGateway: process.env.PINATA_GATEWAY
 });
 const retriveFromIpfs = async (cid) => {
     try {
@@ -42,24 +50,13 @@ const uploadOnIpfs = async (data) => {
 };
 const uploadOnIpfsBill = async (data) => {
     try {
-        console.log("📁 File data received:", {
-            path: data.path,
-            filename: data.filename,
-            originalname: data.originalname,
-            mimetype: data.mimetype,
-            size: data.size
-        });
         // Check if file exists before reading
         if (!fs.existsSync(data.path)) {
             throw new Error(`File not found at path: ${data.path}`);
         }
-        console.log("📁 Reading file from:", data.path);
         const fileBuffer = fs.readFileSync(data.path);
-        console.log("📊 File size:", fileBuffer.length, "bytes");
         const file = new File([fileBuffer], data.originalname, { type: data.mimetype });
-        console.log("🚀 Uploading to Pinata...");
         const uploadData = await pinata.upload.public.file(file);
-        console.log("✅ Pinata upload response:", uploadData);
         if (!uploadData || !uploadData.cid) {
             throw new Error("No CID returned from Pinata");
         }

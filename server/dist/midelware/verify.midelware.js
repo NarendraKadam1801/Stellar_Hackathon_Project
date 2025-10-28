@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import { ApiError } from "../util/apiError.util.js";
+import dotenv from "dotenv";
+dotenv.config();
 const verifyToken = async (req, res, next) => {
     try {
         // Get token from cookies or Authorization header
@@ -24,9 +26,14 @@ const verifyToken = async (req, res, next) => {
         if (!decoded || !decoded.userId) {
             throw new ApiError(401, "Invalid token");
         }
-        // Set NGO ID for use in controllers
+        // Set user data for use in controllers
         req.NgoId = decoded.userId;
-        req.user = decoded;
+        req.user = {
+            id: decoded.userId,
+            email: decoded.email,
+            walletAddr: decoded.walletAddr,
+            NgoName: decoded.NgoName
+        };
         next();
     }
     catch (error) {
