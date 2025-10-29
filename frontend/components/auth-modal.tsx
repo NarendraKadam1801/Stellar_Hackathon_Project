@@ -12,9 +12,19 @@ import { useNGOAuth } from "@/lib/ngo-auth-context"
 export function AuthModal() {
   const dispatch = useDispatch<AppDispatch>()
   const { showAuthModal, authMode } = useSelector((state: RootState) => state.ui)
-  const { isAuthenticated: ngoAuthenticated } = useNGOAuth()
+  const { isAuthenticated: ngoAuthenticated, isLoading } = useNGOAuth()
 
   if (!showAuthModal) return null
+  
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-lg">
+          <p className="text-center">Loading authentication state...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
