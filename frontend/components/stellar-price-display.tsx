@@ -50,33 +50,17 @@ export function StellarPriceDisplay({ showPrice = false, onPriceLoad }: StellarP
   }
 
   // If still loading or no price available
-  if (loading || !stellarPrice) {
+  if (isLoading || !price) {
     return <div className="h-5 w-24 bg-muted/20 rounded animate-pulse" />
   }
 
-  // If no amount provided, just show the current XLM price
-  if (!amount || amount === 0) {
-    return (
-      <div className="flex items-center gap-2">
-        <TrendingUp className="h-4 w-4 text-green-500" />
-        <div className="text-sm">
-          <span className="font-semibold text-foreground">1 XLM</span>
-          <span className="text-xs text-muted-foreground ml-1">= ₹{stellarPrice.toFixed(2)}</span>
-        </div>
-      </div>
-    )
-  }
-
-  // If amount provided, calculate and show XLM equivalent
-  const stellarAmount = amount / stellarPrice
-
+  // Show the current XLM price in INR
   return (
     <div className="flex items-center gap-2">
-      <TrendingUp className="h-4 w-4 text-accent" />
+      <TrendingUp className="h-4 w-4 text-green-500" />
       <div className="text-sm">
-        {showLabel && <span className="text-muted-foreground">≈ </span>}
-        <span className="font-bold text-foreground">{stellarAmount.toFixed(4)} XLM</span>
-        <span className="text-xs text-muted-foreground ml-1">(₹{stellarPrice.toFixed(2)}/XLM)</span>
+        <span className="font-semibold text-foreground">1 XLM</span>
+        <span className="text-xs text-muted-foreground ml-1">= ₹{price.toFixed(2)}</span>
       </div>
     </div>
   )
