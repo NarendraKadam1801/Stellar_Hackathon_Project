@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 
-interface NGOProfile {
+export interface NGOProfile {
   id: string
   name: string
   email: string
@@ -24,6 +24,16 @@ const initialState: NGOAuthState = {
   error: null,
 }
 
+// Helper function to set cookies safely
+const setCookie = (name: string, value: string, days = 7) => {
+  if (typeof document !== 'undefined') {
+    const date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    const expires = `expires=${date.toUTCString()}`;
+    document.cookie = `${name}=${value}; ${expires}; path=/`;
+  }
+};
+
 export const loginNGO = createAsyncThunk(
   "ngoAuth/login",
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
@@ -34,16 +44,6 @@ export const loginNGO = createAsyncThunk(
       if (response.success && response.data) {
         const { accessToken, refreshToken, userData } = response.data
         
-        // Store in localStorage for frontend access
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', accessToken)
-          localStorage.setItem('refreshToken', refreshToken)
-        }
-        
-        // Set cookies for authentication (backend uses these)
-        document.cookie = `accessToken=${accessToken}; path=/; max-age=${7 * 24 * 60 * 60}` // 7 days
-        document.cookie = `refreshToken=${refreshToken}; path=/; max-age=${7 * 24 * 60 * 60}`
-        
         // Convert backend user data to frontend format
         const ngoProfile: NGOProfile = {
           id: userData.Id,
@@ -51,14 +51,22 @@ export const loginNGO = createAsyncThunk(
           email: userData.Email,
           registrationNumber: userData.RegNumber,
           description: userData.Description,
-          createdAt: userData.createdAt || new Date().toISOString(),  // Store as ISO string
+          createdAt: userData.createdAt || new Date().toISOString(),
         }
         
-        // Store NGO profile in localStorage and cookie
+        // Store tokens and profile in client-side storage
         if (typeof window !== 'undefined') {
+          localStorage.setItem('accessToken', accessToken)
+          localStorage.setItem('refreshToken', refreshToken)
           localStorage.setItem('ngo_profile', JSON.stringify(ngoProfile))
+          
+          // Set cookies for authentication
+          setCookie('accessToken', accessToken)
+          setCookie('refreshToken', refreshToken)
+          setCookie('ngo_profile', JSON.stringify(ngoProfile))
         }
-        document.cookie = `ngo_profile=${encodeURIComponent(JSON.stringify(ngoProfile))}; path=/; max-age=${7 * 24 * 60 * 60}`
+        
+        return ngoProfile
         
         return ngoProfile
       } else {
@@ -122,6 +130,27 @@ export const signupNGO = createAsyncThunk(
       const message = error instanceof Error ? error.message : "Signup failed"
       return rejectWithValue(message)
     }
+  },
+)
+
+export const checkNGOCookieThunk = createAsyncThunk(
+  "ngoAuth/checkCookie",
+  async (_, { dispatch }) => {
+    // This will be handled by the checkNGOCookie reducer
+    if (typeof window === 'undefined') {
+      return initialState
+    }
+    
+    try {
+      const profile = localStorage.getItem('ngo_profile')
+      if (profile) {
+        return { ...initialState, isAuthenticated: true, ngoProfile: JSON.parse(profile) }
+      }
+    } catch (error) {
+      console.error('Error checking auth state:', error)
+    }
+    
+    return initialState
   },
 )
 

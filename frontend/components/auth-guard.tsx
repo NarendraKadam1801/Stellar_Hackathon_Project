@@ -4,7 +4,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import type { RootState, AppDispatch } from "@/lib/redux/store"
-import { checkNGOCookie } from "@/lib/redux/slices/ngo-auth-slice"
+import { checkNGOCookieThunk } from "@/lib/redux/slices/ngo-auth-slice"
 import { AuthModal } from "./auth-modal"
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -17,7 +17,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true)
     // Check for existing NGO authentication on mount
-    dispatch(checkNGOCookie())
+    dispatch(checkNGOCookieThunk())
   }, [dispatch])
 
   if (!mounted) {

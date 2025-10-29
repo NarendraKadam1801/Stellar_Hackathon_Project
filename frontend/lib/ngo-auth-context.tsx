@@ -3,18 +3,10 @@
 import type React from "react"
 import { createContext, useContext, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
+import { type NGOProfile } from "./redux/slices/ngo-auth-slice"
 import type { RootState, AppDispatch } from "@/lib/redux/store"
-import { loginNGO, signupNGO, logoutNGO, checkNGOCookie } from "@/lib/redux/slices/ngo-auth-slice"
+import { loginNGO, signupNGO, logoutNGO, checkNGOCookieThunk } from "@/lib/redux/slices/ngo-auth-slice"
 
-interface NGOProfile {
-  id: string
-  name: string
-  email: string
-  registrationNumber: string
-  description: string
-  logo?: string
-  createdAt: Date
-}
 
 interface NGOAuthContextType {
   isAuthenticated: boolean
@@ -35,7 +27,7 @@ export function NGOAuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check for existing NGO session on mount
-    dispatch(checkNGOCookie())
+    dispatch(checkNGOCookieThunk())
   }, [dispatch])
 
   const login = async (email: string, password: string) => {
@@ -57,7 +49,7 @@ export function NGOAuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const checkAuth = () => {
-    dispatch(checkNGOCookie())
+    dispatch(checkNGOCookieThunk())
   }
 
   return (
